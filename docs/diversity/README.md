@@ -12,7 +12,7 @@ operationalised as exposure concentration in the top-10 recommendations.
 
 | Axis | Question | Status |
 |------|----------|--------|
-| **Item-side diversity** | Is exposure in the top-10 concentrated on a few items? | results **pending** (jobs not yet committed) |
+| **Item-side diversity** | Is exposure in the top-10 concentrated on a few items? | complete: beam search gives the best accuracy-diversity balance; stochastic decoding broadens exposure but loses accuracy |
 
 ---
 
@@ -27,7 +27,9 @@ rather than retraining:
 | S2 | Reasoning-activation (RA) | Wrap the answer in `<think>…</think>` before the SID. | `sidreasoner_ra_*` |
 | S3 | GRPO RL | Reinforce reasoning toward correct recommendations. | post-GRPO |
 
-Exposure is evaluated across **all three** stages (SFT / RA / RL).
+The scripts can evaluate exposure across **all three** stages (SFT / RA / RL).
+The delivered RQ5 result reported in the paper focuses on post-RL SIDReasoner
+under different decoders, compared with a SASRec baseline.
 
 Backbone: `Qwen/Qwen3-1.7B` (the paper's setting).
 
@@ -47,12 +49,34 @@ Three exposure metrics are computed over the top-10 lists (added to the modified
 | `Entropy@10` | entropy of the item-exposure distribution | higher (more evenly spread) |
 | `Gini@10` | concentration of exposure among a few items | lower (less concentrated) |
 
-We compare **SFT**, **RA**, and post-**RL** under several decoders (`beam10`,
-`sample_t12_p095`, `sample_t10_k50`) across seeds `42 43 44`, on `Video Games` and
-`Office Products`. The released post-RL diversity-sweep values are encoded in the table
-builder, so the default evaluation only re-runs SFT and RA (`STAGES="sft ra rl"`
-regenerates all three). The SASRec baseline values used in the paper are encoded in
-`utils/make_rq5_diversity_tables.py`.
+For the delivered RQ5 table, we compare **SASRec** with post-**RL**
+SIDReasoner under three decoders (`beam10`, `sample_t12_p095`,
+`sample_t10_k50`) on **Video Games**. Values are mean ± std over seeds
+`42 43 44`.
+
+| Model | Decoding | R@10 ↑ | N@10 ↑ | Coverage@10 ↑ | Entropy@10 ↑ | Gini@10 ↓ |
+|-------|----------|--------|--------|----------------|--------------|-----------|
+| SASRec | — | 0.092 ± 0.004 | 0.052 ± 0.004 | 0.760 ± 0.123 | 6.505 ± 0.499 | 0.830 ± 0.074 |
+| SIDReasoner | `beam10` | 0.102 ± 0.000 | 0.054 ± 0.000 | 0.738 ± 0.000 | 6.855 ± 0.000 | 0.714 ± 0.000 |
+| SIDReasoner | `sample_t12_p095` | 0.062 ± 0.001 | 0.035 ± 0.001 | 0.888 ± 0.002 | 7.223 ± 0.002 | 0.659 ± 0.001 |
+| SIDReasoner | `sample_t10_k50` | 0.062 ± 0.002 | 0.036 ± 0.001 | 0.888 ± 0.002 | 7.138 ± 0.004 | 0.679 ± 0.001 |
+
+Compared with SASRec, SIDReasoner with `beam10` improves R@10 by roughly
+11% and N@10 by roughly 4%, while reducing exposure concentration: Gini@10 is
+about 14% lower and Entropy@10 about 5% higher. Coverage@10 is slightly lower
+(about 3%), so beam search spreads exposure more evenly across a marginally
+smaller item set.
+
+Stochastic decoding moves in the opposite direction: it increases Coverage@10
+by about 20% relative to `beam10` and further lowers Gini@10, but R@10 drops
+from 0.102 to 0.062 (about a 39% relative loss). This makes sampling useful as
+an exposure-broadening control, but too costly as the default recommendation
+decoder.
+
+The broader evaluation scripts can also re-run SFT/RA and optionally regenerate
+all stages (`STAGES="sft ra rl"`), including the Office Products configuration.
+The released post-RL diversity-sweep values and SASRec baselines used for the
+paper table are encoded in `utils/make_rq5_diversity_tables.py`.
 
 ### Reproduce
 
@@ -81,16 +105,23 @@ data/checkpoint layout are documented in
 
 ## Bottom line
 
-- Item-side exposure-concentration metrics (Coverage/Entropy/Gini@10) across SFT/RA/RL
-  and decoders are wired up but not yet run/committed.
+- **Beam search is the best default.** On Video Games, post-RL SIDReasoner with
+  `beam10` improves accuracy over SASRec while also lowering exposure
+  concentration.
+- **Sampling exposes more of the catalog, but the accuracy cost is severe.**
+  Both sampling decoders increase Coverage@10 and reduce Gini@10 relative to
+  `beam10`, but lose about 39% relative R@10.
 - **Practical implication.** Diversity/exposure metrics belong alongside accuracy when
-  evaluating generative recommenders — reporting HR/NDCG alone can hide popularity bias.
+  evaluating generative recommenders: decoding is an inference-time control knob
+  for the accuracy-diversity trade-off, and HR/NDCG alone can hide exposure bias.
 
 ## Caveats
 
-- Result tables are not yet populated — do not cite numbers until
-  `results/item_side_diversity/` is committed.
-- `Qwen/Qwen3-1.7B` backbone; `Video Games` and `Office Products` only.
+- The delivered RQ5 result table is for **Video Games**. The scripts also contain
+  support for Office Products, but the report's main RQ5 table does not use it.
+- Diversity is measured as item-side top-10 exposure only; it does not measure
+  user-side novelty, serendipity, or calibration.
+- `Qwen/Qwen3-1.7B` backbone; seeds `42 43 44`.
 
 ## Reference files
 
@@ -98,4 +129,4 @@ data/checkpoint layout are documented in
 |------|------|
 | Launch scripts (submodule) | `baselines/repos/SIDReasoner/final_scripts/rq5_diversity/` (via `patches/common/sidreasoner-local.patch`) |
 | Jobs / scripts pointers | [`../../jobs/diversity/`](../../jobs/diversity/README.md) · [`../../scripts/diversity/`](../../scripts/diversity/README.md) |
-| Outputs (pending) | `results/item_side_diversity/` |
+| Outputs | `results/item_side_diversity/` |
