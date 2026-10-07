@@ -1,42 +1,58 @@
 # Reproduction Experiments
 
-> **RQ1: Can we reproduce the main performance trends reported in the original
-> SIDReasoner paper?** We re-train Qwen3-1.7B **from scratch** on `Video Games` (S1
-> data) through SFT → reasoning-activation and check that it recovers the paper's
-> SFT → RA trend.
+> **RQ1: Can released artifacts recover the reported results, and can partial pre-RL
+> retraining recover the early-stage trends?**
 
-Result: the SFT → RA trend reproduces on Games — post-SFT `HR@10 0.0387` ≈ the paper's
-`0.0414`, and 5-epoch RA lifts it to `0.0602`. Our RA *overshoots* the paper's
-1-epoch RA (`0.0414`) because the paper specifies 1 activation epoch while the released
-code (and us) run 5 — an epoch-count discrepancy, not a modelling difference. **Games
-only**: Office S1 showed an unexplained ~3× inflation and is excluded. Full numbers in
-[`../model_size/results_table.md`](../model_size/results_table.md); the debugging trail
-(why RL was zero-reward, the `load_best_model_at_end` fix, eval-decoder choice, the
-transformers-version deviation) is in [`S1_status.md`](S1_status.md).
+This suite combines evaluation of released checkpoints across three datasets with
+independent SFT → RA retraining at Qwen3-1.7B on Games. We do not claim full independent
+1.7B GRPO reproduction.
 
----
+## R1 — Released-checkpoint replication
 
-## R1 — S1 SFT → reasoning-activation reproduction (Games)
+Revised Table 1 reports the original SIDReasoner score (Paper), our evaluation (Ckpt),
+relative change, and two-sided bootstrap p-value:
 
-Re-train Qwen3-1.7B from scratch on Games S1 data and check that the SFT → RA trend
-matches the paper. HR@5/10, NDCG@5/10 — our greedy think-mode constrained beam-10 eval
-(rows mirror [`../model_size/results_table.md`](../model_size/results_table.md)):
+| Dataset | Metric | Paper | Ckpt | Δ% | p |
+|---|---|---|---|---|---|
+| Games | R@5 | 0.0710 | 0.0689 | -3.0 | .52 |
+| Games | N@5 | 0.0460 | 0.0438 | -4.8 | .32 |
+| Games | R@10 | 0.1031 | 0.1024 | -0.7 | .85 |
+| Games | N@10 | 0.0563 | 0.0546 | -3.0 | .46 |
+| Office | R@5 | 0.1373 | 0.1365 | -0.6 | .87 |
+| Office | N@5 | 0.1119 | 0.1106 | -1.2 | .75 |
+| Office | R@10 | 0.1648 | 0.1661 | +0.8 | .81 |
+| Office | N@10 | 0.1208 | 0.1202 | -0.5 | .89 |
+| Industrial | R@5 | 0.1109 | 0.1092 | -1.5 | .72 |
+| Industrial | N@5 | 0.0905 | 0.0891 | -1.6 | .72 |
+| Industrial | R@10 | 0.1438 | 0.1474 | +2.5 | .50 |
+| Industrial | N@10 | 0.1010 | 0.1014 | +0.4 | .92 |
+
+Appendix A resamples test users with replacement 10,000 times at the original test-set
+size and computes `p = 2 min(P(metric* <= paper), P(metric* >= paper))`. All original
+scores fall inside the central 95% bootstrap intervals. These are unpaired comparisons
+against published scalar scores, not paired comparisons of model predictions.
+The table is transcribed from the paper; the bootstrap runner and per-user replication
+artifacts are not included in this checkout, so the p-values have not been recomputed here.
+
+**Finding.** Released-artifact scores reproduce within ±5%, with no significant bootstrap
+differences. This verifies artifact consistency, not the full documented training procedure.
+
+## R2 — Independent early-stage retraining (Games)
+
+Retrain Qwen3-1.7B on the original S1 multi-task alignment data ablation. Here **S1 names
+a data setting**, not all three training stages. Evaluation uses greedy reasoning followed
+by constrained beam-10 SID decoding; HR@K is Recall@K in this single-target protocol.
 
 | Stage | HR@5 | HR@10 | NDCG@5 | NDCG@10 |
 |---|---|---|---|---|
 | SFT (raw align) | 0.0215 | 0.0387 | 0.0129 | 0.0184 |
 | RA 5-epoch | 0.0321 | 0.0602 | 0.0187 | 0.0277 |
 
-Paper (Qwen3-1.7B, Games S1), HR@10: SFT/RA `0.0414` → GRPO `0.0741`.
-
-**Finding.** The **SFT → RA trend reproduces on Games**: post-SFT `HR@10 0.0387` ≈ the
-paper's `0.0414`, and 5-epoch RA lifts it to `0.0602`. Our RA *overshoots* the paper's
-1-epoch RA (`0.0414`) only because the paper specifies **1** activation epoch while the
-released code (and us) run **5** — an epoch-count discrepancy, not a modelling difference.
-Validated on **Games only**; Office S1 showed an unexplained ~3× inflation and is excluded
-(see [`S1_status.md`](S1_status.md)).
-
----
+**Finding.** RA improves R@10 from 0.0387 to 0.0602, reproducing the qualitative trend.
+The original **pre-RL / RA** reference is 0.0414; it is not a separate published SFT
+score. The original text specifies one RA epoch while the released code defaults to
+five. The revised paper attributes the absolute-score discrepancy to this mismatch.
+Cold-start RA also needs final-checkpoint selection instead of lowest SID validation loss.
 
 ## Where the code lives
 
@@ -73,36 +89,18 @@ Use the **standard greedy think eval** (`evaluate_Qwen3_think_S1.sh`); the tempe
 best-of-1 variant was only patching the previously-broken (1-epoch) model and is no
 longer needed (see `S1_status.md`).
 
-> **Version note for the write-up:** we ran on transformers 4.51.3 (paper used 4.57.0).
-> The model + SID vocab (152269) are an exact match; the version gap is the main
-> suspected contributor to the small residual difference from the paper's numbers.
+> **Environment:** Transformers **4.51.3**, as confirmed by the authors and recorded
+> in the committed lockfile. The dependency constraint remains `>=4.51.0,<4.52`;
+> the paper has been corrected to match this environment.
 
 ---
 
-## Bottom line
+## Scope and reference files
 
-- **The paper's SFT → RA trend reproduces** on Games from scratch (`HR@10 0.0387 → 0.0602`),
-  with post-SFT matching the paper (`0.0387` ≈ `0.0414`).
-- The RA *overshoot* vs the paper is fully explained by the **1-vs-5 activation-epoch**
-  discrepancy in the released code, not a modelling difference.
-- This reproduction underpins the scaling comparison in
-  [model_size](../model_size/README.md) (the 1.7B Games-S1 rows are shared).
-
-## Caveats
-
-- **Games only** — Office S1 showed an unexplained ~3× inflation vs the paper and is
-  excluded.
-- Single run; `Qwen3-1.7B`. We ran on **transformers 4.51.3** (paper: 4.57.0) — the model
-  + SID vocab (152269) match exactly, so the version gap is the main suspected source of
-  the small residual difference.
-- The RA `eval_loss` **rises by design** (it is the direct-SID loss);
-  `load_best_model_at_end=False` keeps the activated final epoch — do not "fix" it.
-
-## Reference files
-
-| Area | Path |
-|------|------|
-| Debugging trail (zero-reward RL, `load_best_model_at_end`, eval decoder, versions) | [`S1_status.md`](S1_status.md) |
-| Full numbers (1.7B S1 rows) | [`../model_size/results_table.md`](../model_size/results_table.md) |
-| Launch scripts (submodule) | `baselines/repos/SIDReasoner/final_scripts/rq1_reproduction/` (via `patches/common/sidreasoner-local.patch`) |
-| Jobs / scripts pointers | [`../../jobs/reproduction/`](../../jobs/reproduction/README.md) · [`../../scripts/reproduction/`](../../scripts/reproduction/README.md) |
+- Independent early-stage retraining is Games-only and single-run. Historical Office
+  debugging results in [S1_status.md](S1_status.md) are not the final reproduction result.
+- Full stage-wise measurements are retained in [results_table.md](../model_size/results_table.md).
+- Launch scripts live in `baselines/repos/SIDReasoner/final_scripts/rq1_reproduction/`,
+  materialized by `patches/common/sidreasoner-local.patch`.
+- See [jobs](../../jobs/reproduction/README.md), [scripts](../../scripts/reproduction/README.md),
+  and the [alignment audit](../paper-alignment.md) for remaining artifact gaps.

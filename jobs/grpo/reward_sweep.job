@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run all GRPO reward variant experiments (A0–A3), Games only.
+# Run the six paper RQ3 reward variants (A0–A3), Games only.
 #
 # Each variant is one S3-only GRPO run starting from the RA checkpoint.
 # The script loops over all config files under configs/grpo/
@@ -14,7 +14,7 @@
 #   sbatch --export=ALL,CONFIG=configs/grpo/a1_no_format/games.yaml \
 #          jobs/grpo/reward_sweep.job
 
-#SBATCH --partition=gpu_a100
+#SBATCH --partition=gpu_h100
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus-per-node=4
@@ -24,9 +24,9 @@
 #SBATCH --output=jobs/outputs/%x-%j.out
 #SBATCH --error=jobs/outputs/%x-%j.err
 
-# NOTE: 'gpu_a100' is the Snellius full-node A100 partition (4x A100, ~64 usable
-# cores/node) — there is NO partition literally named 'gpu' on this cluster.
-# Switch to 'gpu_h100' for the (faster, ~33% more SBU/hr) H100 nodes.
+# Appendix C specifies four H100 GPUs. Override --partition at submission
+# if using different hardware, and record that deviation with the run.
+# The configs cap training at 100 steps; GRPO_MAX_STEPS_OVERRIDE changes the cap.
 #
 # Optional first-pass screening: pass EPOCHS=N to override stages.s3.total_epochs
 # without editing the (canonical 5-epoch) configs, e.g.:
@@ -49,7 +49,7 @@ source baselines/repos/SIDReasoner/scripts/snellius_env.sh
 
 # The S3 GRPO stage runs `python -m verl.trainer.main_ppo` with cwd set to the
 # SIDReasoner submodule (where the `verl` source tree lives). The custom reward
-# shims, however, do `from src.training.reward_variants import ...`, which resolves
+# shims, however, do `from src.grpo.reward_variants import ...`, which resolves
 # against the OUTER repo root. Put the outer repo on PYTHONPATH so both imports work.
 export PYTHONPATH="$(pwd)${PYTHONPATH:+:${PYTHONPATH}}"
 
@@ -59,7 +59,7 @@ export PYTHONPATH="$(pwd)${PYTHONPATH:+:${PYTHONPATH}}"
 # ROCR_VISIBLE_DEVICES when HIP/CUDA_VISIBLE_DEVICES is set."). Drop the ROCm var.
 unset ROCR_VISIBLE_DEVICES
 
-# gpu_a100 is a SHARED partition: multiple jobs can land on the same physical node.
+# Isolate Ray resources for each H100 job, including reused physical nodes.
 # verl/Ray defaults its session root to /tmp/ray, so a stale dir from another job
 # causes "Failed to get register_center_actor ... lingering Ray resources". Give
 # each job its own Ray temp dir, keyed on the job id. Ray 2.47 honours RAY_TMPDIR.
@@ -78,13 +78,8 @@ echo "[grpo_reward_sweep] Date         : $(date)"
 # ------------------------------------------------------------------
 # Config list
 #
-# Priority order from GRPO.md Section 3 "Suggested priority order":
-#   1. A1, A2 variants
-#   3. A3
-#   5. A0
-#
-# Tip: keep total_epochs=1-2 for a first screening sweep.
-#      Edit the configs to set stages.s3.total_epochs=2 before submitting.
+# Six conditions reported in revised Table 3. The unreported lambda=0.2
+# configuration is available via CONFIG but excluded from the default sweep.
 # ------------------------------------------------------------------
 
 # If a single config is passed via --export CONFIG=..., run only that one.
@@ -95,7 +90,6 @@ else
         # --- Priority 1: format-reward ablation ---
         configs/grpo/a1_no_format/games.yaml
         configs/grpo/a2_lambda_sweep/games_l005.yaml
-        configs/grpo/a2_lambda_sweep/games_l02.yaml
         configs/grpo/a2_lambda_sweep/games_l05.yaml
         configs/grpo/a2_lambda_sweep/games_l10.yaml
 

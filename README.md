@@ -6,9 +6,10 @@ Semantic-ID (SID) generation**: a user's history is encoded as a prompt, the mod
 then emits a Semantic ID — three nested tokens `(a₁, a₂, a₃)`, coarse-to-fine — naming the next
 item. It is trained in three stages and tuned with GRPO reinforcement learning.
 
-This repo does **not** retrain the full pipeline from scratch. We evaluate the authors' released
-checkpoints and run controlled ablations branching from a common reasoning-activation (RA)
-checkpoint, isolating *which ingredients of the recipe actually matter*.
+We evaluate the authors' released checkpoints, independently retrain the early SFT and
+reasoning-activation (RA) stages at 1.7B on Games, and run the full SFT → RA → GRPO
+pipeline at 0.6B and 4B. Component and reward ablations branch from the authors' RA
+checkpoints. Full independent retraining of the 1.7B pipeline is outside this study's budget.
 
 ## Setup
 
@@ -89,11 +90,18 @@ mirror these names (see [`CODE-STRUCTURE.md`](CODE-STRUCTURE.md)).
 
 | Suite | RQ | Question | Headline finding | Docs |
 |-------|----|----------|------------------|------|
-| `reproduction` | RQ1 | Do released checkpoints recover the reported trends? | Partially reproducible from artifacts; SFT/RA/final checkpoints match reported evals closely. | [docs](docs/reproduction/README.md) |
-| `components` | RQ2 | Are the RL stage and reasoning scaffold necessary? | **RL is necessary**; explicit reasoning is only *conditionally* necessary. | [docs](docs/components/README.md) |
-| `model_size` | RQ3 | How does backbone size affect performance? | Method holds at smaller scale but its strength drops with less LM capacity. | [docs](docs/model_size/README.md) |
-| `grpo` | RQ4 | Is the GRPO reward / objective a sensitive design choice? | **Reward shape is immaterial** — a gauge degree of freedom of GRPO's advantage normalization. | [docs](docs/grpo/README.md) |
-| `diversity` | RQ5 | Item-side exposure diversity across decoding. | Clear, inference-time-controllable accuracy–diversity trade-off. | [docs](docs/diversity/README.md) |
+| `reproduction` | RQ1 | Can released artifacts recover the reported results, and can partial pre-RL retraining recover the early-stage trends? | Released scores reproduce; early-stage retraining exposes an RA epoch/checkpoint-selection discrepancy. | [docs](docs/reproduction/README.md) |
+| `components` | RQ2 | Are RL and explicit reasoning strictly necessary? | Extra supervised training does not recover RL gains; scaffold benefits depend on dataset and checkpoint. | [docs](docs/components/README.md) |
+| `grpo` | RQ3 | Is the GRPO reward formulation a sensitive design choice? | Top-10 quality is stable; removing the format term or using linear credit improves rank-1 accuracy. | [docs](docs/grpo/README.md) |
+| `model_size` | RQ4 | How does backbone scale influence behavior? | GRPO accuracy/CoT trends persist across sizes; 4B shows no advantage over 0.6B in these runs. | [docs](docs/model_size/README.md) |
+| `diversity` | RQ5 | How do decoding strategies affect item exposure? | Beam search offers the strongest tested accuracy–exposure compromise; sampling broadens coverage at a large accuracy cost. | [docs](docs/diversity/README.md) |
+
+RQ1–RQ2 are the reproduction analyses (§5); RQ3–RQ5 are extensions (§6).
+The historical submodule directory `rq3_model_size/` implements **current RQ4**;
+its name is retained for compatibility with existing jobs and artifacts.
+See the [paper alignment audit](docs/paper-alignment.md) for confirmed setup decisions and artifact coverage.
+`HR@K` in code/results is Recall@K here because each test case has one target item.
+Pipeline stages 1–3 are distinct from the original paper's S1/S3 *data ablation* labels.
 
 All five suites are written up — start with the **Docs** link in each row above, or see
 [`docs/README.md`](docs/README.md) for the documentation index.
@@ -104,7 +112,7 @@ The repo is organized **by experiment suite**. Each top-level work directory spl
 `common/` folder (shared code) plus one folder per suite (`reproduction/ components/ grpo/
 model_size/ diversity/`). `grpo` is wrapper-native (its configs/jobs/`src` live here); the other
 four suites run from scripts inside the SIDReasoner submodule, materialised by the working-tree
-patch (see [Setup](#setup) below).
+patch (see [Setup](#setup) above).
 
 | Directory | Contents |
 |-----------|----------|

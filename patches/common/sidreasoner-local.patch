@@ -594,13 +594,15 @@ new file mode 100644
 index 0000000..96934f2
 --- /dev/null
 +++ b/final_scripts/README.md
-@@ -0,0 +1,12 @@
-+# Experiment Scripts for Paper RQ2 and RQ5
+@@ -0,0 +1,14 @@
++# Experiment Scripts for Paper RQ1, RQ2, RQ4, and RQ5
 +
 +This folder contains only the job scripts needed to rerun the paper experiments for:
 +
-+- `rq2_components/`: SIDReasoner component necessity experiments and cited appendix ablations.
-+- `rq5_diversity/`: item-side diversity experiments and cited appendix tables.
++- `rq1_reproduction/`: early-stage reproduction (RQ1).
++- `rq2_components/`: component necessity experiments (RQ2).
++- `rq3_model_size/`: model-scale experiments (current RQ4; legacy directory name).
++- `rq5_diversity/`: item-side diversity experiments (RQ5 / Figure 3).
 +
 +The main repository README should cover environment setup, data download, base checkpoint download, and baseline model training. The sub-READMEs here assume those are already available.
 +
@@ -638,16 +640,16 @@ index 0000000..df9c744
 +
 +source ./final_scripts/snellius_env.sh
 +
-+CATEGORY="${CATEGORY:-Office_Products}"
-+TEST_FILE="${TEST_FILE:-./data/Amazon/test/Office_Products_5_2016-10-2018-11.csv}"
-+INFO_FILE="${INFO_FILE:-./data/Amazon/info/Office_Products_5_2016-10-2018-11.txt}"
-+ITEM_FILE="${ITEM_FILE:-./data/Amazon/index/Office_Products.item.json}"
-+INDEX_FILE="${INDEX_FILE:-./data/Amazon/index/Office_Products.index.json}"
++CATEGORY="${CATEGORY:-Video_Games}"
++TEST_FILE="${TEST_FILE:-./data/Amazon/test/Video_Games_5_2016-10-2018-11.csv}"
++INFO_FILE="${INFO_FILE:-./data/Amazon/info/Video_Games_5_2016-10-2018-11.txt}"
++ITEM_FILE="${ITEM_FILE:-./data/Amazon/index/Video_Games.item.json}"
++INDEX_FILE="${INDEX_FILE:-./data/Amazon/index/Video_Games.index.json}"
 +CUDA_LIST="${CUDA_LIST:-0 1}"
 +CUDA_LIST_CSV="${CUDA_LIST_CSV:-0,1}"
 +
-+STAGE2_MODEL="${STAGE2_MODEL:-./output_dir/Office_Products_stage2_reasoning_activation_Qwen3-1.7B_S1/final_checkpoint}"
-+STAGE3_EXPERIMENT_ROOT="${STAGE3_EXPERIMENT_ROOT:-./checkpoints/RecRL_Reasoning/Office_Products_stage3_rl_Qwen3-1.7B_S1}"
++STAGE2_MODEL="${STAGE2_MODEL:-./output_dir/Video_Games_stage2_reasoning_activation_Qwen3-1.7B_S1/final_checkpoint}"
++STAGE3_EXPERIMENT_ROOT="${STAGE3_EXPERIMENT_ROOT:-./checkpoints/RecRL_Reasoning/Video_Games_stage3_rl_Qwen3-1.7B_S1}"
 +
 +exp_list=()
 +
@@ -1078,7 +1080,7 @@ index 0000000..a30c82a
 +
 +By default it runs both datasets and both continuation types:
 +
-+- `extra_sft`: 3 epochs, saves checkpoints by epoch.
++- `extra_sft`: 3 epochs, saves each epoch and exports the lowest-validation-loss model as `final_checkpoint`.
 +- `extra_ra`: 10 epochs, keeps the best/final retained checkpoint.
 +
 +Useful overrides:
@@ -1095,7 +1097,7 @@ index 0000000..a30c82a
 +sbatch final_scripts/rq2_components/evaluate_nonrl_vs_rl.sh
 +```
 +
-+This produces the table used for the main RQ2 claim that non-RL continuations do not recover post-GRPO performance.
++This evaluates the best-validation extra-SFT `final_checkpoint` for the main RQ2 comparison. Per-epoch checkpoints remain available for diagnostics.
 +
 +Outputs:
 +
@@ -1403,7 +1405,7 @@ new file mode 100644
 index 0000000..96f6d6a
 --- /dev/null
 +++ b/final_scripts/rq2_components/evaluate_nonrl_vs_rl.sh
-@@ -0,0 +1,167 @@
+@@ -0,0 +1,163 @@
 +#!/bin/bash
 +#SBATCH --partition=gpu_h100
 +#SBATCH --gpus=2
@@ -1457,14 +1459,12 @@ index 0000000..96f6d6a
 +        RA_CHECKPOINT="./pretrained/Video_Games/sidreasoner_ra_games"
 +        SFT_OUTPUT_DIR="${SCRATCH_OUTPUT_ROOT}/Video_Games_ra_extra_sft_3epochs_Qwen3-1.7B"
 +        MORE_RA_OUTPUT_DIR="${SCRATCH_OUTPUT_ROOT}/Video_Games_ra_extra_sft_10epochs_Qwen3-1.7B"
-+        SFT_STEPS=(48 96 144)
 +        MORE_RA_CHECKPOINT="${MORE_RA_OUTPUT_DIR}/checkpoint-480"
 +        RL_CHECKPOINT="./pretrained/Video_Games/Qwen3-1.7B_base_e2e-RA-GeneralReason_stepRule-smalllR_Games/actor_merged"
 +    else
 +        RA_CHECKPOINT="./pretrained/Office_Products/sidreasoner_ra_office"
 +        SFT_OUTPUT_DIR="${SCRATCH_OUTPUT_ROOT}/Office_Products_ra_extra_sft_3epochs_Qwen3-1.7B"
 +        MORE_RA_OUTPUT_DIR="${SCRATCH_OUTPUT_ROOT}/Office_Products_ra_extra_sft_10epochs_Qwen3-1.7B"
-+        SFT_STEPS=(39 78 117)
 +        MORE_RA_CHECKPOINT="${MORE_RA_OUTPUT_DIR}/final_checkpoint"
 +        RL_CHECKPOINT="./pretrained/Office_Products/Qwen3-1.7B_base_e2e-General_stepRule-smalllR_Office_Products/actor_merged"
 +    fi
@@ -1547,9 +1547,7 @@ index 0000000..96f6d6a
 +    dataset_paths "${dataset}"
 +    checkpoints=(
 +        "RA:${RA_CHECKPOINT}"
-+        "RA + 1 SFT:${SFT_OUTPUT_DIR}/checkpoint-${SFT_STEPS[0]}"
-+        "RA + 2 SFT:${SFT_OUTPUT_DIR}/checkpoint-${SFT_STEPS[1]}"
-+        "RA + 3 SFT:${SFT_OUTPUT_DIR}/checkpoint-${SFT_STEPS[2]}"
++        "RA + extra SFT (best validation):${SFT_OUTPUT_DIR}/final_checkpoint"
 +        "RA + more RA:${MORE_RA_CHECKPOINT}"
 +        "RA + RL:${RL_CHECKPOINT}"
 +    )
@@ -2069,7 +2067,7 @@ index 0000000..ca82b51
 +    case "${continuation}" in
 +        extra_sft)
 +            NUM_EPOCHS="${NUM_EPOCHS:-3}"
-+            LOAD_BEST_MODEL_AT_END="False"
++            LOAD_BEST_MODEL_AT_END="True"
 +            SAVE_TOTAL_LIMIT=""
 +            OUTPUT_DIR="${OUTPUT_DIR:-${SCRATCH_OUTPUT_ROOT}/${dataset}_ra_extra_sft_3epochs_Qwen3-1.7B}"
 +            RUN_NAME="${RUN_NAME:-${dataset}_ra_extra_sft_3epochs_Qwen3-1.7B}"
@@ -3291,7 +3289,7 @@ index 0000000..7769f0d
 +- `results/item_side_diversity/video_games_sft_ra_rl_sasrec_comparison.md`
 +- `results/item_side_diversity/office_products_sft_ra_rl_sasrec_comparison.md`
 +
-+These are the RQ5 main table and the Office Products appendix table.
++Games values underlie revised Figure 3; Office Products is supplementary.
 diff --git a/final_scripts/rq5_diversity/download_sft_checkpoints.sh b/final_scripts/rq5_diversity/download_sft_checkpoints.sh
 new file mode 100644
 index 0000000..38d2ba4
@@ -5149,7 +5147,7 @@ index 0000000..2263e1f
 +        f"# {pretty_dataset} Item-side Diversity Comparison",
 +        "",
 +        "All values are at `K=10` and reported as `mean +/- std` across seeds `42,43,44`.",
-+        "SFT and SFT + RA are computed from item-side diversity JSON outputs. SFT + RA + RL uses the released post-RL diversity sweep values reported in the paper appendix.",
++        "SFT and SFT + RA are computed from item-side diversity JSON outputs. SFT + RA + RL uses stored post-RL sweep values; Games underlies revised Figure 3 and Office is supplementary.",
 +        "",
 +        "| Model | Decoding | Runs | HR@10 | NDCG@10 | Coverage@10 | Entropy@10 | Gini@10 |",
 +        "|---|---|---:|---:|---:|---:|---:|---:|",

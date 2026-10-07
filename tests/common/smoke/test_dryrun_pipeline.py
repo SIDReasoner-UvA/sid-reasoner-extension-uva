@@ -1,4 +1,4 @@
-"""Smoke test 2: verify subprocess command generation via --dry-run for all 8 configs."""
+"""Smoke test 2: verify subprocess command generation via --dry-run for all configured variants."""
 import subprocess
 import sys
 from pathlib import Path
@@ -77,8 +77,13 @@ def test_disabled_stages_absent_from_output(config_rel):
 def test_backbone_and_category_in_commands(config_rel):
     cfg = _load(config_rel)
     out = _run_dry(config_rel)
-    assert cfg["model"]["backbone"] in out, (
-        f"Model backbone '{cfg['model']['backbone']}' not found in output for {config_rel}"
+    # Reward-only runs initialize from RA, not the unfine-tuned backbone.
+    if cfg["stages"]["s1"]["enabled"]:
+        expected_model = cfg["model"]["backbone"]
+    else:
+        expected_model = cfg["stages"]["s3"]["start_checkpoint"]
+    assert expected_model in out, (
+        f"Expected initialization '{expected_model}' not found for {config_rel}"
     )
     assert cfg["experiment"]["dataset_category"] in out, (
         f"Dataset category '{cfg['experiment']['dataset_category']}' not found in output for {config_rel}"
@@ -126,3 +131,19 @@ def test_summary_written_line_present(config_rel):
     assert "[SUMMARY] Written to" in out, (
         f"[SUMMARY] line missing from dry-run output for {config_rel}"
     )
+
+
+@pytest.mark.parametrize("config_rel", ALL_CONFIGS)
+def test_paper_reward_runs_stop_at_100_steps(config_rel, monkeypatch):
+    """The paper budget must apply to direct CLI runs, not only Slurm jobs."""
+    monkeypatch.delenv("GRPO_MAX_STEPS_OVERRIDE", raising=False)
+    out = _run_dry(config_rel)
+    assert "trainer.total_training_steps=100" in out
+
+
+def test_explicit_step_override_takes_precedence(monkeypatch):
+    """Longer follow-up experiments can override the paper's configured cap."""
+    monkeypatch.setenv("GRPO_MAX_STEPS_OVERRIDE", "250")
+    out = _run_dry("configs/grpo/a0_baseline/games.yaml")
+    assert "trainer.total_training_steps=250" in out
+    assert "trainer.total_training_steps=100" not in out

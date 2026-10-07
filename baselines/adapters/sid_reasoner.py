@@ -177,10 +177,10 @@ class SIDReasonerAdapter:
             "trainer.save_freq=100",
             "trainer.test_freq=50",
         ]
-        # Optional hard cap on optimizer steps (screening runs). When set, verl
+        # Configured hard cap on optimizer steps (paper runs: 100). When set, verl
         # stops at this many steps regardless of total_epochs, and treats it as
         # the last step (so a checkpoint + final eval are still produced).
-        max_steps = os.environ.get("GRPO_MAX_STEPS_OVERRIDE")
+        max_steps = os.environ.get("GRPO_MAX_STEPS_OVERRIDE", cfg.get("max_steps"))
         if max_steps:
             cmd.append(f"trainer.total_training_steps={max_steps}")
         self._run(cmd)

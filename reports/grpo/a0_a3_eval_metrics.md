@@ -1,5 +1,13 @@
 # GRPO Reward Experiments — A0–A3 Held-out Eval (NDCG / HR, Games)
 
+> Historical run notes. Held-out ranking numbers below have been updated to
+> revised paper Table 3; other training diagnostics remain historical. For the revised paper interpretation and confirmed setup
+> decisions, see [current RQ3 docs](../../docs/grpo/README.md) and [alignment audit](../../docs/paper-alignment.md).
+> Earlier claims that reward shape is universally immaterial are superseded: the
+> revised result distinguishes top-10 stability from rank-1 improvements. Monotone
+> reward transformations do not generally cancel under GRPO normalization.
+
+
 **Date:** 2026-06-14
 **Backbone:** `Qwen/Qwen3-1.7B` · **Stage:** S3 (GRPO RL) from RA checkpoint `sidreasoner_ra_games`
 **What this is:** the **think-mode ranking evaluation** the A0/A1, A2, and A3 reports each flagged
@@ -37,23 +45,23 @@ as their "next step." Every prior report only had the in-training reward proxy
 
 | Experiment | Reward | NDCG@1 | NDCG@3 | NDCG@5 | NDCG@10 |
 |---|---|---|---|---|---|
-| **A0** baseline      | `R_sr + 0.1·R_f`            | 0.02165 | 0.03800 | 0.04378 | 0.05431 |
-| **A1** no-format     | `R_sr` (λ=0)                 | 0.03077 | 0.04285 | **0.04865** | **0.05879** |
-| **A2** λ=0.05        | `+0.05·R_f`                 | 0.02133 | 0.03762 | 0.04389 | 0.05436 |
-| **A2** λ=0.5         | `+0.5·R_f`                  | 0.02263 | 0.03787 | 0.04378 | 0.05371 |
-| **A2** λ=1.0         | `+1.0·R_f`                  | 0.02524 | 0.03994 | 0.04646 | 0.05639 |
-| **A3** linear acc    | linear `R_sr + 0.1·R_f`    | 0.02898 | 0.04030 | 0.04698 | 0.05707 |
+| **A0** baseline      | `R_sr + 0.1·R_f`            | 0.0216 | 0.0380 | 0.0438 | 0.0543 |
+| **A1** no-format     | `R_sr` (λ=0)                 | 0.0308 | 0.0428 | **0.0486** | **0.0588** |
+| **A2** λ=0.05        | `+0.05·R_f`                 | 0.0213 | 0.0376 | 0.0439 | 0.0544 |
+| **A2** λ=0.5         | `+0.5·R_f`                  | 0.0226 | 0.0379 | 0.0438 | 0.0537 |
+| **A2** λ=1.0         | `+1.0·R_f`                  | 0.0252 | 0.0399 | 0.0464 | 0.0564 |
+| **A3** linear acc    | linear `R_sr + 0.1·R_f`    | 0.0290 | 0.0403 | 0.0470 | 0.0571 |
 
 ## 3. Results — HR@k
 
 | Experiment | Reward | HR@1 | HR@3 | HR@5 | HR@10 |
 |---|---|---|---|---|---|
-| **A0** baseline      | `R_sr + 0.1·R_f`            | 0.02165 | 0.05063 | 0.06480 | 0.09769 |
-| **A1** no-format     | `R_sr` (λ=0)                 | 0.03077 | 0.05161 | 0.06578 | 0.09720 |
-| **A2** λ=0.05        | `+0.05·R_f`                 | 0.02133 | 0.05063 | 0.06594 | **0.09866** |
-| **A2** λ=0.5         | `+0.5·R_f`                  | 0.02263 | 0.04884 | 0.06317 | 0.09411 |
-| **A2** λ=1.0         | `+1.0·R_f`                  | 0.02524 | 0.05080 | **0.06659** | 0.09785 |
-| **A3** linear acc    | linear `R_sr + 0.1·R_f`    | 0.02898 | 0.04868 | 0.06496 | 0.09655 |
+| **A0** baseline      | `R_sr + 0.1·R_f`            | 0.0216 | 0.0506 | 0.0648 | 0.0977 |
+| **A1** no-format     | `R_sr` (λ=0)                 | 0.0308 | 0.0516 | 0.0658 | 0.0972 |
+| **A2** λ=0.05        | `+0.05·R_f`                 | 0.0213 | 0.0506 | 0.0659 | **0.0987** |
+| **A2** λ=0.5         | `+0.5·R_f`                  | 0.0226 | 0.0488 | 0.0632 | 0.0941 |
+| **A2** λ=1.0         | `+1.0·R_f`                  | 0.0252 | 0.0508 | **0.0667** | 0.0978 |
+| **A3** linear acc    | linear `R_sr + 0.1·R_f`    | 0.0290 | 0.0487 | 0.0650 | 0.0965 |
 
 ---
 
@@ -71,9 +79,9 @@ proxy suggested A1 (λ=0) and A3 (linear) were *less stable* — both "regressed
 by step 100, while A0's steep hierarchical reward "held" its peak. On the real held-out NDCG/HR the
 picture flips:
 
-- **A1 (λ=0) is the best on NDCG** (0.04865 @5, 0.05879 @10) and essentially tied-best on HR.
-- **A3 (linear) is second on NDCG** (0.04698 @5, 0.05707 @10).
-- **A0 (baseline) is at the bottom of the NDCG band** (0.04378 @5, 0.05431 @10), despite being the
+- **A1 (λ=0) is the best on NDCG** (0.0486 @5, 0.0588 @10) and essentially tied-best on HR.
+- **A3 (linear) is second on NDCG** (0.0470 @5, 0.0571 @10).
+- **A0 (baseline) is at the bottom of the NDCG band** (0.0438 @5, 0.0543 @10), despite being the
   "stable" one on the proxy.
 
 The lesson is the one the reports already cautioned about: the `mean@7` reward proxy (100 steps, 3
@@ -83,7 +91,7 @@ opposite here. The differences are small enough (≤0.005 NDCG@10) that they may
 this scale, so the safest statement remains: **no variant clearly beats the others on Games.**
 
 **λ magnitude (A2) shows no monotonic trend.** Across λ ∈ {0.05, 0.5, 1.0} NDCG@10 goes
-0.05436 → 0.05371 → 0.05639 — non-monotonic noise around the baseline, consistent with "λ is a
+0.0544 → 0.0537 → 0.0564 — non-monotonic noise around the baseline, consistent with "λ is a
 constant offset that cancels in the advantage; its magnitude is immaterial."
 
 ---

@@ -1,13 +1,17 @@
 # Model-size Experiments
 
-> **RQ3: Does SIDReasoner benefit from a larger backbone?** The paper trains a
-> single Qwen3-1.7B model and leaves scaling as an open question. We re-run the full
-> SFT → reasoning-activation → GRPO pipeline at **0.6B** and **4B** on `Video Games`
-> (S3 full-mix data) and compare against the paper's 1.7B numbers.
+> **RQ4: How does backbone scale influence behavior?** We run SFT → RA → GRPO
+> at 0.6B and 4B on Games (the original S3 full-mix data setting), comparing the
+> trajectories with the original 1.7B reference.
 
-Headline: **no scaling benefit** — 0.6B GRPO `HR@10 0.0734` ≥ 4B GRPO `0.0658`, and
-both sit well below the paper's 1.7B (`0.1031`), so the shortfall is pipeline-wide,
-not a matter of scale. Full numbers in [`results_table.md`](results_table.md).
+The revised paper emphasizes **consistent training behavior across scales**: R@10
+improves and plateaus during GRPO while chain-of-thought length decreases and stabilizes
+(Figure 2). The 4B run shows no advantage over 0.6B under these settings. Its noisier,
+slightly lower final accuracy does not establish that larger backbones are inherently worse:
+these are single-seed runs without scale-specific tuning.
+
+The historical executable path `final_scripts/rq3_model_size/` implements current **RQ4**.
+It is retained for compatibility. Detailed stage scores remain in [results_table.md](results_table.md).
 
 ---
 
@@ -40,11 +44,10 @@ beam-10 eval; see [`results_table.md`](results_table.md) for HR@5/NDCG):
 | 4B | GRPO (step 500) | 0.0658 |
 | 1.7B (paper) | GRPO | 0.1031 |
 
-**Finding.** **No scaling benefit.** 0.6B GRPO (`0.0734`) ≥ 4B GRPO (`0.0658`) — a mild
-regression with *more* parameters — and both sit far below the paper's 1.7B (`0.1031`).
-Raw alignment is ~equal across sizes (`0.0645` ≈ `0.0628`), so the shortfall is
-**pipeline-wide**, not a function of scale. This answers the paper's open scaling question
-(their Conclusion) with a negative result at academic compute scale.
+**Finding.** The 0.6B and 4B runs share the same qualitative GRPO trajectory. The
+selected 4B checkpoint has no accuracy advantage (0.0658 versus 0.0734 R@10).
+Both trail the original 1.7B reference, but this comparison does not isolate capacity
+from retraining, initialization, or tuning differences.
 
 ### M2 — Reasoning-activation epoch count (1-ep vs 5-ep)
 
@@ -56,8 +59,8 @@ The RA checkpoint that feeds GRPO uses a size-dependent epoch count. Compare bot
 | 4B | 0.0532 | 0.0316 | 1-epoch |
 
 **Finding.** **RA epoch count is size-dependent.** At 0.6B the two are ~tied (`0.0501` ≈
-`0.0495`); at 4B, 5-epoch RA **halves** performance (`0.0316` vs `0.0532`). Larger models
-over-entrench the teacher CoT with more activation epochs, so the 4B pipeline branches
+`0.0495`); at 4B, 5-epoch RA **reduces** performance by about 41% (`0.0316` vs `0.0532`). This motivates a size-dependent epoch choice in these runs; the mechanism is not
+isolated. The 4B pipeline branches
 GRPO from the **1-epoch** RA checkpoint and 0.6B from the 5-epoch one.
 
 ---
@@ -108,7 +111,10 @@ bash   scripts/merge_fsdp_ckpt_ALL.sh                                  # global_
 sbatch final_scripts/rq3_model_size/evaluate_Qwen3_think_S3_0p6B_Games_ALL.sh
 
 # 5. collect + plot
-$PYTHON_CMD utils/collect_eval_metrics.py --name_filter 0.6B --exclude act_1ep,reasoning_activation ...
+$PYTHON_CMD utils/collect_eval_metrics.py --name_filter 0.6B --exclude act_1ep,reasoning_activation \
+    --info_file data/Amazon/info/Video_Games_5_2016-10-2018-11.txt \
+    --out results/figure5_0p6B.csv
+# Repeat collection for the 4B run; provide both training-length CSVs before plotting.
 $PYTHON_CMD utils/plot_size_comparison.py \
     --csv_06b results/figure5_0p6B.csv --csv_4b results/figure5_4B.csv \
     --cot_06b results/train_lengths_0p6B.csv --cot_4b results/train_lengths_4B.csv \
@@ -133,18 +139,27 @@ checkpoint is ~47 GB raw): delete `optim_*.pt` / `optimizer.pt` / `scheduler.pt`
 
 ---
 
-## Bottom line
+## Training cost (Appendix D)
 
-- **Scaling does not rescue the pipeline.** 0.6B GRPO (`0.0734`) beats 4B GRPO
-  (`0.0658`), and both trail the paper's 1.7B (`0.1031`) — the gap to the paper is
-  pipeline-wide, not a capacity problem.
-- **Fewer RA epochs for bigger models.** 5-epoch RA helps (or is neutral) at 0.6B but
-  halves 4B; pick the RA epoch count by size (0.6B → 5-ep, 4B → 1-ep).
-- **Faithfulness check.** The 1.7B Games-S1 SFT (`0.0387`) ≈ the paper's `0.0414`, so the
-  reproduction underpinning these comparisons is sound (see
-  [reproduction](../reproduction/README.md)).
-- **Practical implication.** At academic scale, spend compute on the RL stage and
-  initialization quality, not on a larger backbone.
+| Backbone | Hardware | SFT GPU-hours | RA GPU-hours | GRPO GPU-hours | Total |
+|---|---|---|---|---|---|
+| 0.6B (ours) | 4 × H100 | 28.5 | 2.7 | 48.3 | 79.5 |
+| 4B (ours) | 4 × H100 | 50.0 | 0.3 | 148.0 | 198.3 |
+| 1.7B (original authors) | 8 × H100 | 20.0 | 5.0 | 100.0 | 125.0 |
+
+These costs are transcribed from the revised paper, not regenerated from local logs.
+RA uses five epochs for 0.6B/1.7B and one for 4B; GPU counts and epoch counts are not matched.
+GPU labels follow the author-confirmed H100 setup. Transformers **4.51.3** is the
+confirmed environment, matching the committed lockfile and corrected paper.
+
+## Findings
+
+- Stage-wise training behavior persists beyond the original backbone: GRPO improves
+  R@10 while CoT length decreases and stabilizes.
+- 4B offers no advantage over 0.6B in these runs; single seeds and lack of scale-specific
+  tuning limit broader conclusions about capacity.
+- RA epoch count and checkpoint selection matter. This differs from the non-RL
+  continuation controls, which start from already activated models.
 
 ## Caveats
 

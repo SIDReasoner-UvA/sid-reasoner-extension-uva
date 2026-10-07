@@ -1,7 +1,8 @@
 # Diversity Experiments
 
-> **RQ5: Beyond top-line accuracy — how diverse is SIDReasoner in *what* it
-> recommends?** We look at how the model distributes its recommendations across the item
+> **RQ5: How do decoding strategies affect item exposure?**
+> Beyond top-line accuracy, how diverse is SIDReasoner in *what* it
+> recommends? We look at how the model distributes its recommendations across the item
 > catalog: whether exposure in the top-10 is concentrated on a few items (**item-side
 > diversity**).
 
@@ -28,7 +29,7 @@ rather than retraining:
 | S3 | GRPO RL | Reinforce reasoning toward correct recommendations. | post-GRPO |
 
 The scripts can evaluate exposure across **all three** stages (SFT / RA / RL).
-The delivered RQ5 result reported in the paper focuses on post-RL SIDReasoner
+The RQ5 result in revised Figure 3 focuses on post-RL SIDReasoner
 under different decoders, compared with a SASRec baseline.
 
 Backbone: `Qwen/Qwen3-1.7B` (the paper's setting).
@@ -49,10 +50,11 @@ Three exposure metrics are computed over the top-10 lists (added to the modified
 | `Entropy@10` | entropy of the item-exposure distribution | higher (more evenly spread) |
 | `Gini@10` | concentration of exposure among a few items | lower (less concentrated) |
 
-For the delivered RQ5 table, we compare **SASRec** with post-**RL**
+For the data underlying revised Figure 3, we compare **SASRec** with post-**RL**
 SIDReasoner under three decoders (`beam10`, `sample_t12_p095`,
 `sample_t10_k50`) on **Video Games**. Values are mean ± std over seeds
-`42 43 44`.
+`42 43 44`; beam decoding is deterministic. Figure 3 plots R@10 against Gini and
+Coverage. NDCG and entropy below are supplementary repository measurements.
 
 | Model | Decoding | R@10 ↑ | N@10 ↑ | Coverage@10 ↑ | Entropy@10 ↑ | Gini@10 ↓ |
 |-------|----------|--------|--------|----------------|--------------|-----------|
@@ -76,7 +78,9 @@ decoder.
 The broader evaluation scripts can also re-run SFT/RA and optionally regenerate
 all stages (`STAGES="sft ra rl"`), including the Office Products configuration.
 The released post-RL diversity-sweep values and SASRec baselines used for the
-paper table are encoded in `utils/make_rq5_diversity_tables.py`.
+figure (plus supplementary Office results) are encoded in `utils/make_rq5_diversity_tables.py`.
+The table builder uses those stored RL values even if RL JSONs are regenerated; see
+the [artifact coverage notes](../paper-alignment.md#artifact-coverage-and-remaining-reproduction-limits).
 
 ### Reproduce
 
@@ -117,8 +121,8 @@ data/checkpoint layout are documented in
 
 ## Caveats
 
-- The delivered RQ5 result table is for **Video Games**. The scripts also contain
-  support for Office Products, but the report's main RQ5 table does not use it.
+- The RQ5 figure is for **Video Games**. The scripts also contain
+  support for Office Products, but the paper's Figure 3 does not use it.
 - Diversity is measured as item-side top-10 exposure only; it does not measure
   user-side novelty, serendipity, or calibration.
 - `Qwen/Qwen3-1.7B` backbone; seeds `42 43 44`.

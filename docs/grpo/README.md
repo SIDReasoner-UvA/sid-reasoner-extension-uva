@@ -1,15 +1,15 @@
 # GRPO Reward-Shaping Experiments (A0–A3)
 
-> **RQ4: Is the GRPO reward / objective a sensitive design choice?** We vary the reward
-> formulation and related GRPO settings, starting from the authors' reasoning-activation (RA)
-> checkpoint, to assess whether the method depends strongly on a particular reward specification
-> or whether its behavior is stable across reasonable alternatives.
+> **RQ3: Is the GRPO reward formulation a sensitive design choice?** We vary reward
+> formulas from the same authors' post-RA Games checkpoint, holding GRPO objective
+> hyperparameters fixed.
 
-This suite asks *how much the reward shape inside the RL stage matters*. The components suite
-([`../components/`](../components/README.md)) asks the prior question of whether the RL stage is
-needed at all; this suite takes the RL stage as given and probes its reward. The two findings
-are complementary: components shows the RL stage is necessary; GRPO shows that *given* the RL
-stage, the choice of reward formula is immaterial to final ranking quality.
+The revised paper distinguishes **stable list-level quality (K=10)** from **sensitive
+rank-1 accuracy**. A1 (no format reward) improves N@1 by about 43%, and A3 (linear
+partial credit) by about 34%, over A0 in these single-seed runs. This complements
+[RQ2](../components/README.md): RL supplies the main gains, while reward design can
+still change which item is ranked first. KL/group-size/objective ablations are not
+part of the reported experiment.
 
 This document covers the four reward variants actually trained and evaluated: A0 (baseline),
 A1 (no format term), A2 ($\lambda$ sweep), A3 (linear accuracy). Per-variant write-ups with the
@@ -71,8 +71,9 @@ rewards **within each group** of $G = 16$ rollouts:
 \hat{A}_i = \frac{R_i - \text{mean}(R)}{\text{std}(R) + \epsilon}
 ```
 
-This normalization is the reason most reward edits turn out to be gauge degrees of freedom — see
-the findings below.
+A reward term constant within a rollout group cancels when subtracting the group mean.
+This explains reduced sensitivity to the format weight when validity has saturated; it
+does not imply invariance to arbitrary monotone changes of the accuracy reward.
 
 ---
 
@@ -110,16 +111,18 @@ validity or accuracy. The bonus is redundant signal.
 **Reward:** $R = R_{\text{sr}} + \lambda \cdot R_{\text{f}}$, $\lambda \in \{0.05,\ 0.5,\ 1.0\}$ (three configs; $\lambda = 0.2$ was planned but
 only dry-run). Quantifies the validity-pressure vs. accuracy-signal trade-off around $\lambda = 0.1$.
 
-**Finding.** NDCG@10 across $\lambda$ is non-monotone noise ($0.0544 \to 0.0537 \to 0.0564$), not a trend. $\lambda$
-is immaterial.
+**Finding.** NDCG@10 across $\lambda$ is non-monotonic ($0.0544 \to 0.0537 \to 0.0564$).
+The observed top-10 differences are small; these single-seed results do not establish equivalence.
 
 ### A3 — Linear partial-credit accuracy
 
 **Reward:** additive partial credit (no $\times 2$ doubling), plus $0.1 \cdot R_{\text{f}}$. Tests whether spreading credit
 more evenly across the three SID levels gives a smoother gradient.
 
-**Finding.** Within $\sim 0.003$ NDCG@10 of A0 — second-best on NDCG, but inside the band. Accuracy
-curvature is also a gauge degree of freedom.
+**Finding.** A3 is within $\sim 0.003$ NDCG@10 of A0, but NDCG@1 rises from
+0.0216 to 0.0290 (about 34%). Linear partial credit is not an affine rescaling of A0.
+The author-confirmed linear reward uses increments **0.33/0.33/0.34**, giving
+cumulative credit 0/0.33/0.66/1. The implementation is the source of truth.
 
 ---
 
@@ -129,43 +132,51 @@ All six trained checkpoints (A0, A1, A2$\times$3, A3) evaluated with the think-m
 (`scripts/common/eval/evaluate.py → run_eval_think`) on the full Games held-out test set
 ($\sim$6.1k examples, `n_beam=10`, vLLM, `global_step_100` merged actor). Slurm job 23816638.
 
+The reported values below follow revised **Table 3** exactly, including its four-decimal
+precision. They are paper transcriptions, not freshly recomputed evaluation outputs.
+
 ### NDCG@k
 
 | Experiment | Reward | NDCG@1 | NDCG@3 | NDCG@5 | NDCG@10 |
 |---|---|---|---|---|---|
-| **A0** baseline   | $R_{\text{sr}} + 0.1 \cdot R_{\text{f}}$  | 0.02165 | 0.03800 | 0.04378 | 0.05431 |
-| **A1** no-format  | $R_{\text{sr}}$ ($\lambda = 0$)             | 0.03077 | 0.04285 | **0.04865** | **0.05879** |
-| **A2** $\lambda = 0.05$ | $+\,0.05 \cdot R_{\text{f}}$         | 0.02133 | 0.03762 | 0.04389 | 0.05436 |
-| **A2** $\lambda = 0.5$  | $+\,0.5 \cdot R_{\text{f}}$          | 0.02263 | 0.03787 | 0.04378 | 0.05371 |
-| **A2** $\lambda = 1.0$  | $+\,1.0 \cdot R_{\text{f}}$          | 0.02524 | 0.03994 | 0.04646 | 0.05639 |
-| **A3** linear acc | linear $R_{\text{sr}} + 0.1 \cdot R_{\text{f}}$ | 0.02898 | 0.04030 | 0.04698 | 0.05707 |
+| **A0** baseline   | $R_{\text{sr}} + 0.1 \cdot R_{\text{f}}$  | 0.0216 | 0.0380 | 0.0438 | 0.0543 |
+| **A1** no-format  | $R_{\text{sr}}$ ($\lambda = 0$)             | 0.0308 | 0.0428 | **0.0486** | **0.0588** |
+| **A2** $\lambda = 0.05$ | $+\,0.05 \cdot R_{\text{f}}$         | 0.0213 | 0.0376 | 0.0439 | 0.0544 |
+| **A2** $\lambda = 0.5$  | $+\,0.5 \cdot R_{\text{f}}$          | 0.0226 | 0.0379 | 0.0438 | 0.0537 |
+| **A2** $\lambda = 1.0$  | $+\,1.0 \cdot R_{\text{f}}$          | 0.0252 | 0.0399 | 0.0464 | 0.0564 |
+| **A3** linear acc | linear $R_{\text{sr}} + 0.1 \cdot R_{\text{f}}$ | 0.0290 | 0.0403 | 0.0470 | 0.0571 |
 
 ### HR@k
 
 | Experiment | Reward | HR@1 | HR@3 | HR@5 | HR@10 |
 |---|---|---|---|---|---|
-| **A0** baseline   | $R_{\text{sr}} + 0.1 \cdot R_{\text{f}}$  | 0.02165 | 0.05063 | 0.06480 | 0.09769 |
-| **A1** no-format  | $R_{\text{sr}}$ ($\lambda = 0$)             | 0.03077 | 0.05161 | 0.06578 | 0.09720 |
-| **A2** $\lambda = 0.05$ | $+\,0.05 \cdot R_{\text{f}}$         | 0.02133 | 0.05063 | 0.06594 | **0.09866** |
-| **A2** $\lambda = 0.5$  | $+\,0.5 \cdot R_{\text{f}}$          | 0.02263 | 0.04884 | 0.06317 | 0.09411 |
-| **A2** $\lambda = 1.0$  | $+\,1.0 \cdot R_{\text{f}}$          | 0.02524 | 0.05080 | **0.06659** | 0.09785 |
-| **A3** linear acc | linear $R_{\text{sr}} + 0.1 \cdot R_{\text{f}}$ | 0.02898 | 0.04868 | 0.06496 | 0.09655 |
+| **A0** baseline   | $R_{\text{sr}} + 0.1 \cdot R_{\text{f}}$  | 0.0216 | 0.0506 | 0.0648 | 0.0977 |
+| **A1** no-format  | $R_{\text{sr}}$ ($\lambda = 0$)             | 0.0308 | 0.0516 | 0.0658 | 0.0972 |
+| **A2** $\lambda = 0.05$ | $+\,0.05 \cdot R_{\text{f}}$         | 0.0213 | 0.0506 | 0.0659 | **0.0987** |
+| **A2** $\lambda = 0.5$  | $+\,0.5 \cdot R_{\text{f}}$          | 0.0226 | 0.0488 | 0.0632 | 0.0941 |
+| **A2** $\lambda = 1.0$  | $+\,1.0 \cdot R_{\text{f}}$          | 0.0252 | 0.0508 | **0.0667** | 0.0978 |
+| **A3** linear acc | linear $R_{\text{sr}} + 0.1 \cdot R_{\text{f}}$ | 0.0290 | 0.0487 | 0.0650 | 0.0965 |
 
-**Finding (overall).** All variants land in a narrow band: NDCG@10 spans 0.0537–0.0588
-(width $\sim 0.005$), HR@10 spans 0.0941–0.0987. No variant reliably separates from the baseline, and
-A0 sits at the *bottom* of the NDCG band despite being the "stable" variant on the in-training
-proxy.
+**Finding (overall).** NDCG@10 spans 0.0537–0.0588 and HR@10 spans 0.0941–0.0987.
+At rank 1, A1 rises from A0's 0.0216 to 0.0308 (about 43%), and A3 reaches 0.0290
+(about 34%). Thus the revised paper's result is top-10 robustness with rank-1 sensitivity,
+not reward irrelevance at every cutoff. These are point estimates, not multi-seed
+significance claims.
 
-**Finding (why).** Reward shape is nearly irrelevant *by construction*. The RA checkpoint already
-emits valid catalogue SIDs $\sim 100\%$ of the time ($R_{\text{f}} \approx 1.0$ at step 0), so $\lambda \cdot R_{\text{f}}$ is an
-approximately constant offset that **cancels** in the group-relative advantage
-$\hat{A}_i = (R_i - \text{mean}(R)) / \text{std}(R)$ — making $\lambda$ immaterial (A2). Likewise, replacing the $\times 2$ hierarchy
-with additive partial credit (A3) is a monotone rescaling absorbed by std-normalization.
+**Mechanism and limits.** At initialization, free-running rollouts are already almost
+always catalog-valid (`R_f ≈ 1`), so the format bonus is approximately constant within
+a group and cancels in mean subtraction. This is learned validity, not constrained
+training-time decoding. Exact constant-offset cancellation does not prove that the
+observed rank-1 gains were caused by removing that term; the paper's signal-dilution
+explanation is a hypothesis. Standard-deviation normalization is invariant to positive
+scaling only when the epsilon term is negligible, and not to arbitrary monotone reward
+transformations such as A3.
 
-**Finding (proxy disagrees).** The in-training `mean@7` reward proxy suggested A1/A3 *regressed*
-by step 100 while A0 *held* — the opposite of the held-out NDCG/HR ranking. Mean reward is not
-the ranking objective; its step-100 value is largely a gauge quantity and must not be used for
-model selection when format validity is already saturated.
+**Proxy versus ranking.** Appendix C reports that A0 and λ=0.05 retain the step-50
+proxy peak at step 100, while A1 and A3 regress. Held-out ranking reverses that ordering.
+Use validation ranking metrics for model selection; the test metrics here are for reporting.
+Reported ranking tables and summaries use the paper as the authoritative source;
+see the [audit](../paper-alignment.md) for the alignment record.
 
 ---
 
@@ -186,20 +197,15 @@ The six trained GRPO actors (merged `global_step_100`, Games) are on the Hugging
 
 ---
 
-## Bottom line
+## Findings and caveats
 
-- **Reward shape is immaterial.** From a strong reasoning-activated init, dropping, reweighting,
-  or reshaping the format and accuracy terms all give equivalent ranking quality on Games.
-- **The format term and accuracy curvature are gauge degrees of freedom** of GRPO's
-  group-relative advantage normalization — not tunable levers.
-- **Practical implication.** Reward-shaping effort is unlikely to pay off. The performance ceiling
-  is set by the RA initialization and the data; effort is better spent on the GRPO *objective*
-  (KL coefficient, group size, advantage norm).
-
-## Caveats
-
-Games domain only, single seed, 100 training steps per variant. Confirming on Office and over
-multiple seeds would strengthen the "reward shape is immaterial" claim.
+- Reward design has small top-10 effects in this setting, but removing the format term
+  or using linear credit improves rank-1 accuracy in the measured runs.
+- Format saturation explains approximate cancellation of the format bonus; it does not
+  make all reward formulas mathematically equivalent.
+- Games only, Qwen3-1.7B, one seed, 100 GRPO steps per variant. λ=0.2 is an optional
+  unreported configuration, not one of the six Table 3 conditions.
+- Training uses four H100 GPUs, matching the author-confirmed setup and sweep defaults.
 
 ## Reference files
 
@@ -229,13 +235,17 @@ python scripts/common/train/train_pipeline.py \
 
 **Run a single variant (Snellius cluster):**
 ```bash
-sbatch --export=CONFIG=configs/grpo/a1_no_format/games.yaml jobs/grpo/reward_sweep.job
+sbatch --export=ALL,CONFIG=configs/grpo/a1_no_format/games.yaml jobs/grpo/reward_sweep.job
 ```
 
-**Sweep all variants at once (Snellius cluster):**
+**Run the six paper variants sequentially (Snellius cluster):**
 ```bash
 sbatch jobs/grpo/reward_sweep.job
 ```
+
+The paper configs cap training at **100 optimizer steps**, including direct Python runs.
+`GRPO_MAX_STEPS_OVERRIDE` can override the cap for additional experiments. To run the
+unreported λ=0.2 condition, pass `CONFIG=configs/grpo/a2_lambda_sweep/games_l02.yaml`.
 
 **Evaluation:** Use `scripts/common/eval/evaluate.py` (think-mode eval, `run_eval_think`) on the merged S3 actor checkpoint.
 

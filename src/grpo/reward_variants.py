@@ -1,7 +1,7 @@
 """
 GRPO reward-formula variants for SIDReasoner stage S3.
 
-Each variant is a subclass of BaseRewardComputer that overrides `compute()`.
+Each variant is a subclass of BaseRewardComputer that overrides `_score()`.
 All utility functions (extract_sid_tokens, extract_solution,
 construct_prefix_allowed_hashmap) are copied from the original reward file so
 that shim files loaded by verl are fully self-contained and never depend on
@@ -187,6 +187,8 @@ class RewardA2SweepLambda(BaseRewardComputer):
 # A3 — Linear / partial-credit accuracy
 # Change   : R_sr = 0.33·[a1=g1] + 0.33·[a1=g1 & a2=g2] + 0.34·[all match]
 #            (additive, not multiplicative)
+# Author-confirmed weights: cumulative prefix credit is 0, 0.33, 0.66, 1.0.
+# This implementation defines the reward used for the reported experiments.
 # Hypothesis: Does softer, more linear reward shaping beat the steep ×2
 #             doubling? Reduces reward sparsity by rewarding partial matches
 #             more evenly across all three SID levels.

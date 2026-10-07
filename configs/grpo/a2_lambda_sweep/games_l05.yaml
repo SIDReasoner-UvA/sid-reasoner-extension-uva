@@ -20,6 +20,7 @@ stages:
   s3:
     enabled: true
     total_epochs: 5
+    max_steps: 100  # RQ3 / Appendix C optimizer-step budget
     n_gpus_per_node: 4
     start_checkpoint: data/checkpoints/sidreasoner_ra_games
 

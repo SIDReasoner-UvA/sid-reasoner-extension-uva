@@ -7,17 +7,19 @@ suites are:
 |-------|-------------------|
 | `reproduction` | RQ1 — reproduce the original SIDReasoner paper trends. |
 | `components`   | RQ2 — component ablations (which pipeline pieces matter). |
-| `model_size`   | RQ3 — effect of backbone size. |
-| `grpo`         | RQ4 — sensitivity to GRPO reward / objective design. |
+| `grpo`         | RQ3 — sensitivity to GRPO reward formulation. |
+| `model_size`   | RQ4 — effect of backbone scale on behavior. |
 | `diversity`    | RQ5 — item-side exposure diversity. |
 
-(RQ numbering follows the paper *body* / `docs/README.md`.)
+(RQ numbering follows the revised paper, consistently in its introduction and body.)
+The legacy executable directory `rq3_model_size/` implements current **RQ4**;
+it is retained so existing commands and artifacts remain usable.
 
 Each of the eight top-level "work" directories is split into the **same** child
 set: a `common/` folder for code shared by all suites, plus one folder per suite
 (`components/ diversity/ grpo/ model_size/ reproduction/`). `grpo` is wrapper-native
 (configs + jobs + `src/grpo`). The `components` (RQ2), `diversity` (RQ5 item-side),
-`model_size` (RQ3) and `reproduction` (RQ1) experiment code lives **inside the
+`model_size` (RQ4) and `reproduction` (RQ1) experiment code lives **inside the
 SIDReasoner submodule** — under
 `baselines/repos/SIDReasoner/final_scripts/{rq2_components,rq5_diversity,rq3_model_size,rq1_reproduction}/`
 plus `utils/` (analysis/plotting/upload helpers), `evaluate_Qwen3_strict_no_think.py`,

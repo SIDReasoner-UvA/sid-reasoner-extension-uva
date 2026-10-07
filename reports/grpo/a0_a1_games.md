@@ -1,5 +1,13 @@
 # GRPO Reward Experiments — A0 vs A1 (Games)
 
+> Historical run notes. Held-out ranking numbers below have been updated to
+> revised paper Table 3; other training diagnostics remain historical. For the revised paper interpretation and confirmed setup
+> decisions, see [current RQ3 docs](../../docs/grpo/README.md) and [alignment audit](../../docs/paper-alignment.md).
+> Earlier claims that reward shape is universally immaterial are superseded: the
+> revised result distinguishes top-10 stability from rank-1 improvements. Monotone
+> reward transformations do not generally cancel under GRPO normalization.
+
+
 **Date:** 2026-06-13
 **Backbone:** `Qwen/Qwen3-1.7B` · **Stage:** S3 (GRPO RL) from RA checkpoint `sidreasoner_ra_games`
 **Variants:** A0 (baseline, `R = R_sr + 0.1·R_f`) vs A1 (no format term, `R = R_sr`)
@@ -105,8 +113,8 @@ Games full test set, `n_beam=10`:
 
 | | NDCG@5 | NDCG@10 | HR@5 | HR@10 |
 |---|---|---|---|---|
-| A0 (baseline) | 0.04378 | 0.05431 | 0.06480 | 0.09769 |
-| A1 (no format) | **0.04865** | **0.05879** | **0.06578** | 0.09720 |
+| A0 (baseline) | 0.0438 | 0.0543 | 0.0648 | 0.0977 |
+| A1 (no format) | **0.0486** | **0.0588** | **0.0658** | 0.0972 |
 
 **The held-out metric reverses the proxy's "stability" story.** On the noisy `mean@7` proxy A1
 looked *less* stable (it regressed to step-0 by step 100 while A0 held). On real NDCG/HR, **A1 (λ=0)

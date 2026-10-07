@@ -1,5 +1,13 @@
 # GRPO Reward Experiments — A2 λ Sweep (Games)
 
+> Historical run notes. Held-out ranking numbers below have been updated to
+> revised paper Table 3; other training diagnostics remain historical. For the revised paper interpretation and confirmed setup
+> decisions, see [current RQ3 docs](../../docs/grpo/README.md) and [alignment audit](../../docs/paper-alignment.md).
+> Earlier claims that reward shape is universally immaterial are superseded: the
+> revised result distinguishes top-10 stability from rank-1 improvements. Monotone
+> reward transformations do not generally cancel under GRPO normalization.
+
+
 **Date:** 2026-06-13
 **Backbone:** `Qwen/Qwen3-1.7B` · **Stage:** S3 (GRPO RL) from RA checkpoint `sidreasoner_ra_games`
 **Variant:** A2 — sweep the format-reward weight λ in `R = R_sr + λ·R_f`
@@ -123,13 +131,13 @@ Games full test set, `n_beam=10`:
 
 | λ | NDCG@5 | NDCG@10 | HR@5 | HR@10 |
 |---|---|---|---|---|
-| 0.00 (A1) | 0.04865 | 0.05879 | 0.06578 | 0.09720 |
-| 0.05 | 0.04389 | 0.05436 | 0.06594 | **0.09866** |
-| 0.10 (A0) | 0.04378 | 0.05431 | 0.06480 | 0.09769 |
-| 0.50 | 0.04378 | 0.05371 | 0.06317 | 0.09411 |
-| 1.00 | 0.04646 | 0.05639 | **0.06659** | 0.09785 |
+| 0.00 (A1) | 0.0486 | 0.0588 | 0.0658 | 0.0972 |
+| 0.05 | 0.0439 | 0.0544 | 0.0659 | **0.0987** |
+| 0.10 (A0) | 0.0438 | 0.0543 | 0.0648 | 0.0977 |
+| 0.50 | 0.0438 | 0.0537 | 0.0632 | 0.0941 |
+| 1.00 | 0.0464 | 0.0564 | **0.0667** | 0.0978 |
 
-**No monotonic trend in λ.** NDCG@10 across λ ∈ {0.05, 0.5, 1.0} goes 0.05436 → 0.05371 → 0.05639 —
+**No monotonic trend in λ.** NDCG@10 across λ ∈ {0.05, 0.5, 1.0} goes 0.0544 → 0.0537 → 0.0564 —
 noise around the baseline, not a trend. The full spread across the whole sweep is only ~0.005
 NDCG@10. This confirms the §5 argument on the held-out metric: **the value of λ is immaterial**
 because `λ·R_f` is a near-constant offset that cancels in the GRPO group-relative advantage. The

@@ -19,15 +19,18 @@ HR@10 / NDCG@10, our greedy think-mode eval (constrained beam-10). ★ = the rea
 Paper (Qwen3-1.7B), before-RL (RA) / after-RL (GRPO), HR@10:
 - Games S3: 0.0806 / 0.1031   - Games S1: 0.0414 / 0.0741
 
-## Takeaways
-- **1-vs-5 epoch RA is size-dependent** — 0.6B Games ~tie (0.0501 vs 0.0495); 4B Games 1-ep ≫ 5-ep
-  (0.0532 vs 0.0316 — 5-ep halves it). Larger models prefer fewer activation epochs (over-entrench teacher CoT).
-- **No scaling benefit:** 0.6B GRPO 0.0734 > 4B GRPO 0.0658 (mild regression); raw alignment ~equal (0.0645 ≈ 0.0628).
-  Addresses the paper's open scaling question (their Conclusion) with a negative result on academic-scale data.
-- **Faithfulness:** Games S1 SFT 0.0387 ≈ paper 0.0414 ✓ (Games reproduces the paper).
-  (Office excluded here — it showed an unexplained ~3× inflation vs paper, isolated to Office; see investigation notes.)
-- **4B GRPO caveat:** non-monotonic / possibly under-converged (test peak 0.0697 @ step 200, but val mean@1 peaks at
-  500, so 0.0658 is the defensible number). HR@5/N@5 for the 4B GRPO row live in results/figure5_4B.csv.
+## Interpretation in the revised paper (RQ4)
+
+- R@10 improves and plateaus during GRPO as CoT length decreases and stabilizes.
+  These qualitative trends persist across the tested backbone sizes (Figure 2).
+- The 4B run has no advantage over 0.6B in these single-seed, untuned comparisons.
+  The absolute gap to the original 1.7B result does not by itself identify its cause.
+- At 4B, five RA epochs reduce R@10 by about 41% relative to one epoch; at 0.6B the
+  epoch variants are close. This motivates the size-dependent choices used here.
+- The 1.7B S1 retraining reproduces the SFT → RA improvement. The original 0.0414
+  reference is pre-RL/RA, not a separately reported post-SFT score.
+- The 4B run is non-monotonic: report the validation-selected step 500 (0.0658),
+  not the test peak at step 200 (0.0697). See the suite README for scope and costs.
 
 Notes: HR@5/N@5 for 4B GRPO not extracted here (only HR@10/N@10 from figure5_4B.csv). All numbers reproducible via
 the submodule's `scripts/evaluate_models_in_dir.sh` (cached) + `utils/collect_eval_metrics.py`.

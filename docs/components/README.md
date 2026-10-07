@@ -1,7 +1,6 @@
 # Component-Necessity Experiments
 
-> **RQ2: How necessary are SIDReasoner's reinforcement-learning and explicit-reasoning
-> components for its performance?** Starting from the authors' reasoning-activation (RA)
+> **RQ2: Are RL and explicit reasoning strictly necessary?** Starting from the authors' reasoning-activation (RA)
 > checkpoint, we test whether the post-RA gains require the GRPO reinforcement-learning stage
 > specifically, or whether they can be recovered by more supervised training or stronger
 > decoding; and we test whether the explicit `<think>…</think>` reasoning scaffold is actually
@@ -12,7 +11,7 @@ GRPO suite ([`../grpo/`](../grpo/README.md)) asks how sensitive the RL stage is 
 this suite asks the prior question of whether the RL stage and the reasoning scaffold are
 needed at all. The two findings are complementary: components shows the RL stage is necessary
 but the reasoning scaffold is only conditionally necessary; GRPO shows that *given* the RL
-stage, the reward shape inside it barely matters.
+stage, reward edits have small top-10 effects but can improve rank-1 accuracy.
 
 ---
 
@@ -49,29 +48,35 @@ Backbone: `Qwen/Qwen3-1.7B` (the original paper's setting). Datasets: `Video Gam
 
 ### C1 — Can non-RL continuations replace GRPO? (RL necessity)
 
-From the RA checkpoint, train three continuations and compare all of them to the actual
+From the RA checkpoint, train two non-RL continuations and compare them to the actual
 post-GRPO checkpoint, with deltas measured relative to RA on the same dataset:
 
-- **Extra SFT** — continue supervised fine-tuning from RA (best of the RA + *n* SFT runs).
-- **Extra RA** — continue reasoning-activation training from RA.
+- **Extra SFT** — continue supervised fine-tuning from RA for three epochs.
+- **Extra RA** — continue reasoning-activation training from RA for ten epochs.
 - **RA + RL** — the real GRPO continuation (the SIDReasoner recipe).
+
+Both controls select the best epoch by validation loss, as confirmed by the authors.
+The launcher sets `LOAD_BEST_MODEL_AT_END=True` for extra SFT and extra RA.
+Extra SFT retains its epoch checkpoints for diagnostics; the main evaluation uses
+its `final_checkpoint`, containing the restored best model. This selection applies to
+continuations from an already activated model, not cold-start RA.
 
 All continuations still produce **valid** SIDs, so any gap is not explained by malformed
 output — it is an *objective-mismatch* effect: SFT and RA optimize imitation-style losses,
 while GRPO directly optimizes a reward tied to recommendation correctness.
 
-**Result (R@10 / NDCG@10, $\Delta$ vs. RA):**
+**Result (revised Table 2; relative percentage changes versus RA):**
 
-| Dataset | Checkpoint | R@10 | NDCG@10 | $\Delta$R@10 | $\Delta$NDCG@10 |
+| Dataset | Checkpoint | R@10 | NDCG@10 | ΔR@10 (%) | ΔNDCG@10 (%) |
 |---|---|---|---|---|---|
 | Games | RA | 0.0876 | 0.0474 | — | — |
-| Games | Best extra SFT (RA + 3 SFT) | 0.0511 | 0.0294 | $-0.0365$ | $-0.0180$ |
-| Games | Extra RA | 0.0440 | 0.0255 | $-0.0436$ | $-0.0220$ |
-| Games | **RA + RL** | **0.1024** | **0.0546** | $\mathbf{+0.0148}$ | $\mathbf{+0.0072}$ |
+| Games | Extra SFT | 0.0511 | 0.0294 | -41.7 | -38.0 |
+| Games | Extra RA | 0.0440 | 0.0255 | -49.8 | -46.2 |
+| Games | **RA + RL** | **0.1024** | **0.0546** | **+16.9** | **+15.2** |
 | Office | RA | 0.1424 | 0.1023 | — | — |
-| Office | Best extra SFT (RA + 1 SFT) | 0.1385 | 0.0995 | $-0.0039$ | $-0.0028$ |
-| Office | Extra RA | 0.1424 | 0.1028 | $+0.0000$ | $+0.0005$ |
-| Office | **RA + RL** | **0.1661** | **0.1202** | $\mathbf{+0.0236}$ | $\mathbf{+0.0179}$ |
+| Office | Extra SFT | 0.1385 | 0.0995 | -2.7 | -2.7 |
+| Office | Extra RA | 0.1424 | 0.1028 | +0.0 | +0.5 |
+| Office | **RA + RL** | **0.1661** | **0.1202** | **+16.6** | **+17.5** |
 
 **Finding.** GRPO is the **only** continuation that consistently improves over RA. On Games
 the non-RL continuations degrade *below* RA; on Office they roughly hold RA but the post-GRPO
@@ -101,15 +106,16 @@ evaluate larger beams and stochastic search over the **Video Games RA (pre-RL)**
 
 Strict **no-think** ablation: the evaluator removes both the instruction to reason and the
 `<think>…</think>` scaffold, then re-runs the *same* checkpoints. Deltas are computed as
-**no-think $-$ thinking**, so a negative value means thinking was better.
+**no-think $-$ thinking** from the displayed scores, so a negative value means
+thinking was better. This delta table is supplementary; the post-RL scores match Table 4.
 
 | Dataset | Checkpoint | T R@10 | No-T R@10 | $\Delta$R@10 | T NDCG@10 | No-T NDCG@10 | $\Delta$NDCG@10 |
 |---|---|---|---|---|---|---|---|
 | Games | RA pre-RL | 0.0876 | 0.1001 | $+0.0125$ | 0.0474 | 0.0503 | $+0.0029$ |
-| Games | RL post-GRPO | 0.1024 | 0.0980 | $-0.0044$ | 0.0546 | 0.0515 | $-0.0030$ |
-| Office | RA pre-RL | 0.1424 | 0.1473 | $+0.0049$ | 0.1023 | 0.1028 | $+0.0006$ |
-| Office | RL post-GRPO | 0.1661 | 0.1247 | $-0.0413$ | 0.1202 | 0.0974 | $-0.0228$ |
-| Industrial | RL post-GRPO | 0.1474 | 0.1366 | $-0.0108$ | 0.1014 | 0.0999 | $-0.0016$ |
+| Games | RL post-GRPO | 0.1024 | 0.0980 | $-0.0044$ | 0.0546 | 0.0515 | $-0.0031$ |
+| Office | RA pre-RL | 0.1424 | 0.1473 | $+0.0049$ | 0.1023 | 0.1028 | $+0.0005$ |
+| Office | RL post-GRPO | 0.1661 | 0.1247 | $-0.0414$ | 0.1202 | 0.0974 | $-0.0228$ |
+| Industrial | RL post-GRPO | 0.1474 | 0.1366 | $-0.0108$ | 0.1014 | 0.0999 | $-0.0015$ |
 
 **Finding.** Reasoning is *strongly* beneficial only for **Office post-RL**, mildly beneficial
 for **Industrial** at R@10, and marginal for **Games**. Crucially, **before RL** strict
@@ -128,16 +134,16 @@ constrained beam search (beam 10):
 
 | Dataset | Prompt condition | R@10 | NDCG@10 |
 |---|---|---|---|
-| Video Games | Original thinking | 0.1031 | 0.0537 |
-| Video Games | Strict no-think | 0.0975 | 0.0514 |
-| Video Games | No step-by-step | 0.0865 | 0.0489 |
+| Video Games | Original thinking | 0.1024 | 0.0546 |
+| Video Games | Strict no-think | 0.0980 | 0.0515 |
+| Video Games | No step-by-step | 0.0864 | 0.0489 |
 | Video Games | **Preference summary** | **0.1055** | **0.0666** |
-| Office Products | **Original thinking** | **0.1660** | 0.1204 |
-| Office Products | Strict no-think | 0.1256 | 0.0977 |
+| Office Products | **Original thinking** | **0.1661** | 0.1202 |
+| Office Products | Strict no-think | 0.1247 | 0.0974 |
 | Office Products | No step-by-step | 0.1603 | **0.1239** |
 | Office Products | Preference summary | 0.1656 | 0.1207 |
-| Industrial | Original thinking | 0.1480 | 0.1026 |
-| Industrial | Strict no-think | 0.1368 | 0.1003 |
+| Industrial | Original thinking | 0.1474 | 0.1014 |
+| Industrial | Strict no-think | 0.1366 | 0.0999 |
 | Industrial | **No step-by-step** | **0.1489** | **0.1079** |
 | Industrial | Preference summary | 0.1436 | 0.1024 |
 
@@ -163,7 +169,7 @@ cd baselines/repos/SIDReasoner
 sbatch final_scripts/rq2_components/train_ra_continuations.sh
 sbatch final_scripts/rq2_components/evaluate_nonrl_vs_rl.sh
 
-# C2: pre-RL inference-search sweep (appendix)
+# C2: supplementary pre-RL inference-search sweep
 sbatch final_scripts/rq2_components/evaluate_inference_search.sh
 
 # C3: thinking vs strict no-think
@@ -191,4 +197,6 @@ layout are documented in `final_scripts/rq2_components/README.md` inside the sub
 
 **Caveats.** Qwen3-1.7B only; deltas are vs. the RA checkpoint per dataset; the RL-replacement
 table covers Games and Office; the reasoning ablations cover Games, Office, and Industrial with
-varying coverage per cell.
+varying coverage per cell. The scaffold ablation tests inference-time formatting, not
+the value of reasoning supervision during training. C4 matches revised Table 4; C2 is
+a supplementary repository diagnostic, not a table in the revised appendix.

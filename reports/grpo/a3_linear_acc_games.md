@@ -1,5 +1,13 @@
 # GRPO Reward Experiments — A3 Linear Accuracy (Games)
 
+> Historical run notes. Held-out ranking numbers below have been updated to
+> revised paper Table 3; other training diagnostics remain historical. For the revised paper interpretation and confirmed setup
+> decisions, see [current RQ3 docs](../../docs/grpo/README.md) and [alignment audit](../../docs/paper-alignment.md).
+> Earlier claims that reward shape is universally immaterial are superseded: the
+> revised result distinguishes top-10 stability from rank-1 improvements. Monotone
+> reward transformations do not generally cancel under GRPO normalization.
+
+
 **Date:** 2026-06-14
 **Backbone:** `Qwen/Qwen3-1.7B` · **Stage:** S3 (GRPO RL) from RA checkpoint `sidreasoner_ra_games`
 **Variant:** A3 — linear / partial-credit accuracy, `R = R_sr + 0.1·R_f` with
@@ -120,8 +128,8 @@ Games full test set, `n_beam=10`:
 
 | | NDCG@5 | NDCG@10 | HR@5 | HR@10 |
 |---|---|---|---|---|
-| A3 (linear acc) | **0.04698** | **0.05707** | 0.06496 | 0.09655 |
-| A0 (baseline)   | 0.04378 | 0.05431 | 0.06480 | 0.09769 |
+| A3 (linear acc) | **0.0470** | **0.0571** | 0.0650 | 0.0965 |
+| A0 (baseline)   | 0.0438 | 0.0543 | 0.0648 | 0.0977 |
 
 **The held-out metric flips the §5 conclusion.** On the noisy `mean@7` proxy A3 looked *worse* than
 A0 — it regressed to step-0 by step 100 while the hierarchical A0 reward held. On real NDCG/HR,

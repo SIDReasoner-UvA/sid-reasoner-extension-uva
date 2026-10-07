@@ -1,5 +1,9 @@
 # S1 reasoning + RL — what happened & where we are
 
+> Historical run notes. For the revised paper interpretation and confirmed setup
+> decisions, see [current reproduction docs](README.md) and [alignment audit](../paper-alignment.md).
+
+
 > **TL;DR**
 > - RL was broken (0 reward) → fixed: activation needs **5 epochs**, not 1; the model now actually reasons.
 > - Dropping the altered temperature eval — it was only patching the broken model; **using the standard greedy eval** now.
