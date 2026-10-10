@@ -15,7 +15,7 @@ diff --git a/calc.py b/calc.py
 index 5bb1a3a..9cf528d 100644
 --- a/calc.py
 +++ b/calc.py
-@@ -1,19 +1,79 @@
+@@ -1,19 +1,89 @@
  # from transformers import GenerationConfig, LlamaForCausalLM, LlamaTokenizer
  # import transformers
  # import torch
@@ -80,15 +80,25 @@ index 5bb1a3a..9cf528d 100644
 +    return float(-(probs * np.log(probs + 1e-12)).sum())
 +
 +
-+def _gini(counts):
++def _gini(counts, catalog_size):
++    """Exposure Gini over the full catalog, including unexposed items.
++
++    Zero exposures precede the sorted observed counts. Offset their ranks
++    rather than allocating a dense catalog-sized array. An all-zero exposure
++    vector returns 0.0, matching the SASRec evaluator's convention.
++    """
++    if catalog_size < len(counts) or catalog_size < 0:
++        raise ValueError("Catalog size cannot be smaller than the exposure counter")
 +    if not counts:
 +        return 0.0
 +    values = np.array(sorted(counts.values()), dtype=np.float64)
++    if not np.all(np.isfinite(values)) or np.any(values < 0):
++        raise ValueError("Exposure counts must be finite and nonnegative")
 +    total = values.sum()
 +    if total == 0:
 +        return 0.0
-+    n = len(values)
-+    index = np.arange(1, n + 1)
++    n = catalog_size
++    index = np.arange(n - len(values) + 1, n + 1)
 +    return float((2 * np.sum(index * values) / (n * total)) - ((n + 1) / n))
 +
 +
@@ -100,7 +110,7 @@ index 5bb1a3a..9cf528d 100644
      if item_path.endswith(".txt"):
          item_path = item_path[:-4]
      CC = 0
-@@ -31,9 +91,8 @@ def gao(path, item_path):
+@@ -31,9 +101,8 @@ def gao(path, item_path):
              item_dict[item_names[i]].append(item_ids[i])
  
      result_dict = dict()
@@ -111,7 +121,7 @@ index 5bb1a3a..9cf528d 100644
          result_dict[p] = {
              "NDCG": [],
              "HR": [],
-@@ -44,7 +103,8 @@ def gao(path, item_path):
+@@ -44,7 +113,8 @@ def gao(path, item_path):
          test_data = json.load(f)
          f.close()
  
@@ -121,7 +131,7 @@ index 5bb1a3a..9cf528d 100644
  
          for index, sample in tqdm(enumerate(text)):
              if n_beam == -1:
-@@ -72,16 +132,76 @@ def gao(path, item_path):
+@@ -72,16 +142,76 @@ def gao(path, item_path):
                  if minID < topk:
                      ALLNDCG[index] = ALLNDCG[index] + (1 / math.log(minID + 2))
                      ALLHR[index] = ALLHR[index] + 1
@@ -154,7 +164,7 @@ index 5bb1a3a..9cf528d 100644
 +                    "EffectiveCatalogSize": math.exp(entropy_at_k) if entropy_at_k < 700 else float("inf"),
 +                    "Top1Entropy": top1_entropy,
 +                    "Top1EffectiveCatalogSize": math.exp(top1_entropy) if top1_entropy < 700 else float("inf"),
-+                    "Gini": _gini(counts_at_k),
++                    "Gini": _gini(counts_at_k, catalog_size),
 +                }
 +            )
          print(n_beam)
@@ -604,7 +614,7 @@ index 0000000..96934f2
 +- `rq3_model_size/`: model-scale experiments (current RQ4; legacy directory name).
 +- `rq5_diversity/`: item-side diversity experiments (RQ5 / Figure 3).
 +
-+The main repository README should cover environment setup, data download, base checkpoint download, and baseline model training. The sub-READMEs here assume those are already available.
++See the main repository README for setup and artifact-layout requirements. These launchers require data and checkpoints in the submodule layout.
 +
 +Shared cluster environment settings are kept in `snellius_env.sh` because the job scripts source it directly. Utility Python files used by these scripts are in the top-level `utils/` folder.
 +
@@ -920,8 +930,8 @@ index 0000000..8121979
 +#SBATCH --cpus-per-task=32
 +#SBATCH --time=16:00:00
 +#SBATCH --output=slurm_output/%x-%j.out
-+#SBATCH --mail-type=BEGIN,END,FAIL
-+#SBATCH --mail-user=danielsleiman@outlook.com
++# No email notifications are enabled by default.
++# Email notifications may be configured with sbatch --mail-user.
 +
 +# S1 ablation (Video Games, 1.7B) = Phase A alignment SFT with MULTI-TASK data ONLY.
 +# Mirrors scripts/sft_Qwen3_S1.sh (Office) exactly except for the Video_Games
@@ -995,8 +1005,8 @@ index 0000000..28e2761
 +#SBATCH --cpus-per-task=16
 +#SBATCH --time=12:00:00
 +#SBATCH --output=slurm_output/%x-%j.out
-+#SBATCH --mail-type=BEGIN,END,FAIL
-+#SBATCH --mail-user=danielsleiman@outlook.com
++# No email notifications are enabled by default.
++# Email notifications may be configured with sbatch --mail-user.
 +
 +# S1 Phase B: reasoning activation (Video Games, Qwen3-1.7B) from the S1 alignment
 +# checkpoint. Same activation data as all ablations (integrated_narrative.csv);
@@ -1072,7 +1082,7 @@ index 0000000..a30c82a
 +
 +## 1. Train Non-RL Continuations from RA
 +
-+This grouped script replaces the old per-dataset/per-continuation scripts.
++This script runs the selected datasets and continuation types.
 +
 +```bash
 +sbatch final_scripts/rq2_components/train_ra_continuations.sh
@@ -1088,7 +1098,7 @@ index 0000000..a30c82a
 +```bash
 +DATASETS="Video_Games" CONTINUATIONS="extra_sft" sbatch final_scripts/rq2_components/train_ra_continuations.sh
 +DATASETS="Office_Products" CONTINUATIONS="extra_ra" sbatch final_scripts/rq2_components/train_ra_continuations.sh
-+SCRATCH_OUTPUT_ROOT=/scratch-shared/scur1246/SIDReasoner_outputs sbatch final_scripts/rq2_components/train_ra_continuations.sh
++SCRATCH_OUTPUT_ROOT=./output_dir/continuations sbatch final_scripts/rq2_components/train_ra_continuations.sh
 +```
 +
 +## 2. Evaluate RA, Extra SFT, Extra RA, and RL
@@ -1110,7 +1120,7 @@ index 0000000..a30c82a
 +sbatch final_scripts/rq2_components/evaluate_inference_search.sh
 +```
 +
-+This is the appendix diagnostic cited by RQ2. It evaluates whether stronger beam/search variants over the pre-RL Video Games checkpoint can close the post-RL gap.
++This is a supplementary repository diagnostic for RQ2. It evaluates whether stronger beam/search variants over the pre-RL Video Games checkpoint can close the post-RL gap.
 +
 +Default configs:
 +
@@ -1127,7 +1137,7 @@ index 0000000..a30c82a
 +sbatch final_scripts/rq2_components/evaluate_reasoning_ablation.sh
 +```
 +
-+This grouped script replaces the old dataset-specific reasoning-effect jobs. It evaluates thinking and strict no-think over the checkpoint/dataset combinations used in the paper.
++This script evaluates thinking and strict no-think over the checkpoint/dataset combinations used in the paper.
 +
 +Outputs:
 +
@@ -1197,7 +1207,7 @@ index 0000000..e4a7cce
 +SEEDS="${1:-${SEEDS:-42}}"
 +SEEDS="${SEEDS//,/ }"
 +RESULT_ROOT="${RESULT_ROOT:-./results/video_games_accuracy_search}"
-+TMP_ROOT="${TMP_ROOT:-/scratch-shared/scur1246/SIDReasoner_tmp/video_games_accuracy_search/${SLURM_JOB_ID:-manual}}"
++TMP_ROOT="${TMP_ROOT:-${TMPDIR:-/tmp}/${USER:-user}/SIDReasoner_tmp/video_games_accuracy_search/${SLURM_JOB_ID:-manual}}"
 +SUMMARY_MANIFEST="${SUMMARY_MANIFEST:-${RESULT_ROOT}/accuracy_search_manifest_${SLURM_JOB_ID:-manual}.tsv}"
 +
 +mkdir -p ./logs ./slurm_output "${RESULT_ROOT}" "${TMP_ROOT}"
@@ -1431,7 +1441,7 @@ index 0000000..96f6d6a
 +fi
 +
 +DATASETS="${DATASETS:-Video_Games Office_Products}"
-+SCRATCH_OUTPUT_ROOT="${SCRATCH_OUTPUT_ROOT:-/scratch-shared/scur1246/SIDReasoner_outputs}"
++SCRATCH_OUTPUT_ROOT="${SCRATCH_OUTPUT_ROOT:-./output_dir/continuations}"
 +CUDA_LIST="${CUDA_LIST:-0 1}"
 +CUDA_LIST_CSV="${CUDA_LIST_CSV:-0,1}"
 +NUM_SAMPLES="${NUM_SAMPLES:--1}"
@@ -1441,7 +1451,7 @@ index 0000000..96f6d6a
 +MAX_NEW_TOKENS="${MAX_NEW_TOKENS:-1024}"
 +SEED="${SEED:-42}"
 +RESULT_ROOT="${RESULT_ROOT:-./results/rq2_nonrl_vs_rl}"
-+TMP_ROOT="${TMP_ROOT:-/scratch-shared/scur1246/SIDReasoner_tmp/rq2_nonrl_vs_rl/${SLURM_JOB_ID:-manual}}"
++TMP_ROOT="${TMP_ROOT:-${TMPDIR:-/tmp}/${USER:-user}/SIDReasoner_tmp/rq2_nonrl_vs_rl/${SLURM_JOB_ID:-manual}}"
 +SUMMARY_MANIFEST="${SUMMARY_MANIFEST:-${RESULT_ROOT}/manifest_${SLURM_JOB_ID:-manual}.tsv}"
 +SUMMARY_OUTPUT="${SUMMARY_OUTPUT:-${RESULT_ROOT}/summary_${SLURM_JOB_ID:-manual}.md}"
 +LOG_FILE="${LOG_FILE:-./logs/rq2_nonrl_vs_rl_${SLURM_JOB_ID:-manual}.log}"
@@ -1620,7 +1630,7 @@ index 0000000..8196425
 +PREFERENCE_SUMMARY_REASONING_TOKENS="${PREFERENCE_SUMMARY_REASONING_TOKENS:-128}"
 +
 +RESULT_ROOT="${RESULT_ROOT:-./results/appendix_prompt_ablation_table}"
-+TMP_ROOT="${TMP_ROOT:-/scratch-shared/scur1246/SIDReasoner_tmp/appendix_prompt_ablation/${SLURM_JOB_ID:-manual}}"
++TMP_ROOT="${TMP_ROOT:-${TMPDIR:-/tmp}/${USER:-user}/SIDReasoner_tmp/appendix_prompt_ablation/${SLURM_JOB_ID:-manual}}"
 +SUMMARY_MANIFEST="${SUMMARY_MANIFEST:-${RESULT_ROOT}/appendix_prompt_ablation_manifest_${SLURM_JOB_ID:-manual}.tsv}"
 +SUMMARY_OUTPUT="${SUMMARY_OUTPUT:-${RESULT_ROOT}/appendix_prompt_ablation_summary_${SLURM_JOB_ID:-manual}.md}"
 +LOG_FILE="${LOG_FILE:-./logs/evaluate_appendix_prompt_ablation_table_${SLURM_JOB_ID:-manual}.log}"
@@ -1898,7 +1908,7 @@ index 0000000..12013aa
 +THINKING_MAX_NEW_TOKENS="${THINKING_MAX_NEW_TOKENS:-1024}"
 +STRICT_MAX_NEW_TOKENS="${STRICT_MAX_NEW_TOKENS:-64}"
 +RESULT_ROOT="${RESULT_ROOT:-./results/rq2_reasoning_ablation}"
-+TMP_ROOT="${TMP_ROOT:-/scratch-shared/scur1246/SIDReasoner_tmp/rq2_reasoning_ablation/${SLURM_JOB_ID:-manual}}"
++TMP_ROOT="${TMP_ROOT:-${TMPDIR:-/tmp}/${USER:-user}/SIDReasoner_tmp/rq2_reasoning_ablation/${SLURM_JOB_ID:-manual}}"
 +SUMMARY_MANIFEST="${SUMMARY_MANIFEST:-${RESULT_ROOT}/manifest_${SLURM_JOB_ID:-manual}.tsv}"
 +SUMMARY_OUTPUT="${SUMMARY_OUTPUT:-${RESULT_ROOT}/summary_${SLURM_JOB_ID:-manual}.md}"
 +LOG_FILE="${LOG_FILE:-./logs/rq2_reasoning_ablation_${SLURM_JOB_ID:-manual}.log}"
@@ -2037,7 +2047,7 @@ index 0000000..ca82b51
 +
 +DATASETS="${DATASETS:-Video_Games Office_Products}"
 +CONTINUATIONS="${CONTINUATIONS:-extra_sft extra_ra}"
-+SCRATCH_OUTPUT_ROOT="${SCRATCH_OUTPUT_ROOT:-/scratch-shared/scur1246/SIDReasoner_outputs}"
++SCRATCH_OUTPUT_ROOT="${SCRATCH_OUTPUT_ROOT:-./output_dir/continuations}"
 +CUDA_DEVICES="${CUDA_DEVICES:-0,1,2,3}"
 +NPROC_PER_NODE="${NPROC_PER_NODE:-4}"
 +MASTER_PORT_BASE="${MASTER_PORT_BASE:-29520}"
@@ -2245,8 +2255,8 @@ index 0000000..47841e9
 +#SBATCH --cpus-per-task=32
 +#SBATCH --time=48:00:00
 +#SBATCH --output=slurm_output/%x-%j.out
-+#SBATCH --mail-type=BEGIN,END,FAIL
-+#SBATCH --mail-user=danielsleiman@outlook.com
++# No email notifications are enabled by default.
++# Email notifications may be configured with sbatch --mail-user.
 +
 +# S3 Phase C: GRPO (Video Games, Qwen3-4B) from the S3 reasoning-activation ckpt.
 +# Identical settings to RL_training_S3_0p6B_Games.sh (start identical, tune only if
@@ -2639,8 +2649,8 @@ index 0000000..3f120c3
 +#SBATCH --cpus-per-task=16
 +#SBATCH --time=10:00:00
 +#SBATCH --output=slurm_output/%x-%j.out
-+#SBATCH --mail-type=BEGIN,END,FAIL
-+#SBATCH --mail-user=danielsleiman@outlook.com
++# No email notifications are enabled by default.
++# Email notifications may be configured with sbatch --mail-user.
 +
 +# S3 thinking-mode evaluation (Video Games, Qwen3-4B). Evaluates BOTH:
 +#   - Phase B (reasoning activation) ckpt  -> "S3 before RL" numbers
@@ -2871,8 +2881,8 @@ index 0000000..a269777
 +#SBATCH --cpus-per-task=32
 +#SBATCH --time=48:00:00
 +#SBATCH --output=slurm_output/%x-%j.out
-+#SBATCH --mail-type=BEGIN,END,FAIL
-+#SBATCH --mail-user=danielsleiman@outlook.com
++# No email notifications are enabled by default.
++# Email notifications may be configured with sbatch --mail-user.
 +
 +# S3 ablation (Video Games, Qwen3-4B) = Phase A alignment SFT with the full mix:
 +# MULTI-TASK + ENRICHED + GENERAL REASONING. Mirrors sft_Qwen3_S3_0p6B_Games.sh
@@ -3015,13 +3025,13 @@ index 0000000..3065fc2
 +#SBATCH --cpus-per-task=16
 +#SBATCH --time=06:00:00
 +#SBATCH --output=slurm_output/%x-%j.out
-+#SBATCH --mail-type=BEGIN,END,FAIL
-+#SBATCH --mail-user=danielsleiman@outlook.com
++# No email notifications are enabled by default.
++# Email notifications may be configured with sbatch --mail-user.
 +
 +# S3 Phase B: reasoning activation (Video Games, Qwen3-0.6B) at 1 EPOCH (paper-faithful).
 +# Tests whether the lightweight 1-epoch activation dips the strong S3 base less than
 +# the 5-epoch run (raw align 0.0645 -> 5ep 0.0501). Base alignment is read from the
-+# PROJECT copy (home copy was cleared). Distinct output dir so it never clobbers _5ep.
++# local SFT output. A distinct output directory preserves the five-epoch run.
 +
 +set -euo pipefail
 +
@@ -3039,7 +3049,7 @@ index 0000000..3065fc2
 +EVAL_FILE="${EVAL_FILE:-./data/Amazon/valid/Video_Games_5_2016-10-2018-11.csv}"
 +TEST_FILE="${TEST_FILE:-./data/Amazon/test/Video_Games_5_2016-10-2018-11.csv}"
 +INFO_FILE="${INFO_FILE:-./data/Amazon/info/Video_Games_5_2016-10-2018-11.txt}"
-+BASE_MODEL="${BASE_MODEL:-/projects/prjs2120/groups/group_11/checkpoints/0.6B/Video_Games_stage1_sft_S3/final_checkpoint}"
++BASE_MODEL="${BASE_MODEL:-./output_dir/Video_Games_stage1_sft_Qwen3-0.6B_S3/final_checkpoint}"
 +OUTPUT_DIR="${OUTPUT_DIR:-./output_dir/Video_Games_stage2_reasoning_activation_1epoch_Qwen3-0.6B_S3}"
 +RUN_NAME="${RUN_NAME:-Video_Games_stage2_reasoning_activation_1epoch_Qwen3-0.6B_S3}"
 +LOG_FILE="${LOG_FILE:-./logs/${RUN_NAME}.txt}"
@@ -3086,8 +3096,8 @@ index 0000000..7e9344c
 +#SBATCH --cpus-per-task=16
 +#SBATCH --time=16:00:00
 +#SBATCH --output=slurm_output/%x-%j.out
-+#SBATCH --mail-type=BEGIN,END,FAIL
-+#SBATCH --mail-user=danielsleiman@outlook.com
++# No email notifications are enabled by default.
++# Email notifications may be configured with sbatch --mail-user.
 +
 +# S3 Phase B: reasoning activation (Video Games, Qwen3-4B), 5 epochs.
 +# 4 GPUs (torchrun DDP/FSDP) for speed + to fit 4B without OOM. micro_batch 8.
@@ -3159,8 +3169,8 @@ index 0000000..b38d2c1
 +#SBATCH --cpus-per-task=16
 +#SBATCH --time=10:00:00
 +#SBATCH --output=slurm_output/%x-%j.out
-+#SBATCH --mail-type=BEGIN,END,FAIL
-+#SBATCH --mail-user=danielsleiman@outlook.com
++# No email notifications are enabled by default.
++# Email notifications may be configured with sbatch --mail-user.
 +
 +# S3 Phase B: reasoning activation (Video Games, Qwen3-4B) at 1 EPOCH.
 +# Run alongside the 5-epoch version to pick the better activation before GRPO.
@@ -3229,7 +3239,7 @@ index 0000000..7769f0d
 +
 +- Higher `Coverage@10` means broader catalog exposure.
 +- Higher `Entropy@10` means exposure is more evenly spread.
-+- Lower `Gini@10` means less concentration among a few items.
++- Lower `Gini@10` means less concentration across the full catalog, including unexposed items.
 +
 +Assumptions before running:
 +
@@ -3251,7 +3261,7 @@ index 0000000..7769f0d
 +- `pretrained/Video_Games/sidreasoner_sft_games`
 +- `pretrained/Office_Products/sidreaonser_sft_office`
 +
-+## 1. Evaluate SFT and RA Stages
++## 1. Evaluate SFT, RA, and RL Stages
 +
 +```bash
 +sbatch final_scripts/rq5_diversity/evaluate_item_side_diversity.sh
@@ -3260,11 +3270,11 @@ index 0000000..7769f0d
 +Defaults:
 +
 +- Datasets: `Video_Games Office_Products`
-+- Stages: `sft ra`
++- Stages: `sft ra rl`
 +- Decoders: `beam10 sample_t12_p095 sample_t10_k50`
 +- Seeds: `42 43 44`
 +
-+The released post-RL diversity sweep values are already encoded in the table builder. To regenerate RL as well:
++All SIDReasoner rows are computed from prediction JSONs, including RL. Existing JSONs can be rescored without regenerating predictions. To evaluate all stages:
 +
 +```bash
 +STAGES="sft ra rl" sbatch final_scripts/rq5_diversity/evaluate_item_side_diversity.sh
@@ -3371,15 +3381,15 @@ index 0000000..9ca7569
 +
 +CHECKPOINT_ROOT="${CHECKPOINT_ROOT:-./pretrained}"
 +RESULT_ROOT="${RESULT_ROOT:-./results/item_side_diversity}"
-+TMP_ROOT="${TMP_ROOT:-/scratch-shared/scur1246/SIDReasoner_tmp/item_side_diversity/${SLURM_JOB_ID:-manual}}"
++TMP_ROOT="${TMP_ROOT:-${TMPDIR:-/tmp}/${USER:-user}/SIDReasoner_tmp/item_side_diversity/${SLURM_JOB_ID:-manual}}"
 +MANIFEST_PATH="${MANIFEST_PATH:-${RESULT_ROOT}/manifest_${SLURM_JOB_ID:-manual}.tsv}"
 +SUMMARY_PATH="${SUMMARY_PATH:-${RESULT_ROOT}/summary_${SLURM_JOB_ID:-manual}.md}"
 +LOG_FILE="${LOG_FILE:-./logs/evaluate_item_side_diversity_${SLURM_JOB_ID:-manual}.log}"
 +
 +DATASETS="${DATASETS:-Video_Games Office_Products}"
-+# Default skips RL because the released post-RL diversity sweep was already run.
-+# Use STAGES="sft ra rl" to regenerate all three stages in one job.
-+STAGES="${STAGES:-sft ra}"
++# The comparison table requires prediction JSONs for all three stages.
++# Existing predictions can be reused; metrics are recomputed by the table builder.
++STAGES="${STAGES:-sft ra rl}"
 +DECODERS="${DECODERS:-beam10 sample_t12_p095 sample_t10_k50}"
 +SEEDS="${SEEDS:-42 43 44}"
 +
@@ -3715,8 +3725,8 @@ index 0000000..ae3043f
 +#SBATCH --cpus-per-task=16
 +#SBATCH --time=16:00:00
 +#SBATCH --output=slurm_output/%x-%j.out
-+#SBATCH --mail-type=BEGIN,END,FAIL
-+#SBATCH --mail-user=danielsleiman@outlook.com
++# No email notifications are enabled by default.
++# Email notifications may be configured with sbatch --mail-user.
 +
 +# Evaluate EVERY model (any dir containing config.json) under the given root dir(s).
 +# Category (Video_Games / Office_Products / Industrial) is inferred per-model from
@@ -3726,7 +3736,7 @@ index 0000000..ae3043f
 +# the end built ONLY from the models processed in this run.
 +#
 +# Usage:
-+#   sbatch scripts/evaluate_models_in_dir.sh /projects/prjs2120/groups/group_11/checkpoints/1.7B
++#   sbatch scripts/evaluate_models_in_dir.sh ./checkpoints/1.7B
 +#   sbatch scripts/evaluate_models_in_dir.sh .../checkpoints/0.6B .../checkpoints/1.7B
 +
 +set -euo pipefail
@@ -4968,7 +4978,7 @@ new file mode 100644
 index 0000000..2263e1f
 --- /dev/null
 +++ b/utils/make_rq5_diversity_tables.py
-@@ -0,0 +1,263 @@
+@@ -0,0 +1,221 @@
 +import argparse
 +import json
 +import math
@@ -4995,56 +5005,6 @@ index 0000000..2263e1f
 +    },
 +}
 +
-+RL = {
-+    "Video_Games": {
-+        "beam10": {
-+            "HR@10": (0.101596, 0.0),
-+            "NDCG@10": (0.054421, 0.0),
-+            "Coverage@10": (0.738206, 0.0),
-+            "Entropy@10": (6.855367, 0.0),
-+            "Gini@10": (0.714358, 0.0),
-+        },
-+        "sample_t12_p095": {
-+            "HR@10": (0.062195, 0.000564),
-+            "NDCG@10": (0.035467, 0.000970),
-+            "Coverage@10": (0.888025, 0.001699),
-+            "Entropy@10": (7.222948, 0.002355),
-+            "Gini@10": (0.659118, 0.001056),
-+        },
-+        "sample_t10_k50": {
-+            "HR@10": (0.061598, 0.002068),
-+            "NDCG@10": (0.036161, 0.000815),
-+            "Coverage@10": (0.887938, 0.001519),
-+            "Entropy@10": (7.138439, 0.003831),
-+            "Gini@10": (0.678755, 0.000698),
-+        },
-+    },
-+    "Office_Products": {
-+        "beam10": {
-+            "HR@10": (0.166461, 0.0),
-+            "NDCG@10": (0.119926, 0.0),
-+            "Coverage@10": (0.697600, 0.0),
-+            "Entropy@10": (6.419960, 0.0),
-+            "Gini@10": (0.756569, 0.0),
-+        },
-+        "sample_t12_p095": {
-+            "HR@10": (0.124606, 0.001596),
-+            "NDCG@10": (0.101177, 0.001158),
-+            "Coverage@10": (0.834634, 0.002085),
-+            "Entropy@10": (6.759951, 0.009852),
-+            "Gini@10": (0.714437, 0.001224),
-+        },
-+        "sample_t10_k50": {
-+            "HR@10": (0.122414, 0.001661),
-+            "NDCG@10": (0.101079, 0.001377),
-+            "Coverage@10": (0.827600, 0.002170),
-+            "Entropy@10": (6.636489, 0.008575),
-+            "Gini@10": (0.736947, 0.001358),
-+        },
-+    },
-+}
-+
-+
 +def _normalize(value):
 +    return value.strip('"\n').strip()
 +
@@ -5063,15 +5023,25 @@ index 0000000..2263e1f
 +    return float(-(probs * np.log(probs + 1e-12)).sum())
 +
 +
-+def _gini(counts):
++def _gini(counts, catalog_size):
++    """Exposure Gini over the full catalog, including unexposed items.
++
++    Zero exposures precede the sorted observed counts. Offset their ranks
++    rather than allocating a dense catalog-sized array. An all-zero exposure
++    vector returns 0.0, matching the SASRec evaluator's convention.
++    """
++    if catalog_size < len(counts) or catalog_size < 0:
++        raise ValueError("Catalog size cannot be smaller than the exposure counter")
 +    if not counts:
 +        return 0.0
 +    values = np.array(sorted(counts.values()), dtype=np.float64)
++    if not np.all(np.isfinite(values)) or np.any(values < 0):
++        raise ValueError("Exposure counts must be finite and nonnegative")
 +    total = values.sum()
 +    if total == 0:
 +        return 0.0
-+    n = len(values)
-+    index = np.arange(1, n + 1)
++    n = catalog_size
++    index = np.arange(n - len(values) + 1, n + 1)
 +    return float((2 * np.sum(index * values) / (n * total)) - ((n + 1) / n))
 +
 +
@@ -5096,7 +5066,7 @@ index 0000000..2263e1f
 +        "NDCG@10": ndcg / n,
 +        "Coverage@10": len(counts) / catalog_size,
 +        "Entropy@10": _entropy(counts),
-+        "Gini@10": _gini(counts),
++        "Gini@10": _gini(counts, catalog_size),
 +    }
 +
 +
@@ -5121,7 +5091,7 @@ index 0000000..2263e1f
 +
 +    rows = [("SASRec", "baseline", 3, SASREC[dataset])]
 +    by_key = {("SASRec", "baseline"): SASREC[dataset]}
-+    for stage, label in (("sft", "SFT"), ("ra", "SFT + RA")):
++    for stage, label in (("sft", "SFT"), ("ra", "SFT + RA"), ("rl", "SFT + RA + RL")):
 +        for decoder in ("beam10", "sample_t12_p095", "sample_t10_k50"):
 +            values = defaultdict(list)
 +            for seed in (42, 43, 44):
@@ -5138,16 +5108,14 @@ index 0000000..2263e1f
 +            aggregate = {metric: _mean_std(vals) for metric, vals in values.items()}
 +            rows.append((label, decoder, 3, aggregate))
 +            by_key[(label, decoder)] = aggregate
-+    for decoder, metrics in RL[dataset].items():
-+        rows.append(("SFT + RA + RL", decoder, 3, metrics))
-+        by_key[("SFT + RA + RL", decoder)] = metrics
 +
 +    pretty_dataset = dataset.replace("_", " ")
 +    lines = [
 +        f"# {pretty_dataset} Item-side Diversity Comparison",
 +        "",
 +        "All values are at `K=10` and reported as `mean +/- std` across seeds `42,43,44`.",
-+        "SFT and SFT + RA are computed from item-side diversity JSON outputs. SFT + RA + RL uses stored post-RL sweep values; Games underlies revised Figure 3 and Office is supplementary.",
++        "All SIDReasoner stages are recomputed from per-seed prediction JSONs. SASRec uses stored full-catalog baseline aggregates; verify the same catalog and test population before comparison.",
++        "Gini includes zero exposure for every unexposed catalog item.",
 +        "",
 +        "| Model | Decoding | Runs | HR@10 | NDCG@10 | Coverage@10 | Entropy@10 | Gini@10 |",
 +        "|---|---|---:|---:|---:|---:|---:|---:|",
@@ -5573,16 +5541,16 @@ new file mode 100644
 index 0000000..6130991
 --- /dev/null
 +++ b/utils/push_to_hf.py
-@@ -0,0 +1,82 @@
+@@ -0,0 +1,84 @@
 +#!/usr/bin/env python
 +"""Push SIDReasoner extension checkpoints to a Hugging Face model repo.
 +
 +Each entry uploads a merged HF model dir into its own subfolder of one repo.
-+Teammates: edit CHECKPOINTS (absolute paths) and REPO_ID, then:
++Set CHECKPOINT_ROOT, GRPO_CHECKPOINT_ROOT, and HF_REPO_ID, then:
 +
 +    export HF_TOKEN=hf_xxx                    # write token from huggingface.co/settings/tokens
-+    python scripts/push_to_hf.py --dry-run    # validate paths first (expect all OK)
-+    python scripts/push_to_hf.py              # upload
++    python utils/push_to_hf.py --dry-run    # validate paths first (expect all OK)
++    python utils/push_to_hf.py              # upload
 +
 +The upload is large (~34 GB for all 8); run it inside tmux/screen so it
 +survives a disconnect. Re-running is safe: upload_folder skips files that are
@@ -5593,10 +5561,10 @@ index 0000000..6130991
 +import argparse
 +from huggingface_hub import HfApi, login
 +
-+REPO_ID = "slndaniel/SIDReasoner-extensions"
++REPO_ID = os.environ.get("HF_REPO_ID")
 +
-+PROJ = "/projects/prjs2120/groups/group_11/checkpoints"
-+HOME = "/home/scur1215/Daniel_lora_0.6B/checkpoints"
++PROJ = os.environ.get("CHECKPOINT_ROOT", "./checkpoints")
++GRPO_ROOT = os.environ.get("GRPO_CHECKPOINT_ROOT", "./checkpoints")
 +
 +# repo subfolder -> absolute path of the MERGED HF checkpoint dir
 +# (must contain config.json + *.safetensors; NOT a raw verl FSDP shard dir)
@@ -5606,7 +5574,7 @@ index 0000000..6130991
 +    "0.6B/GRPO": f"{PROJ}/0.6B/Video_Games_stage3_rl_S3/step_500/actor_merged",
 +    "4B/SFT":    f"{PROJ}/4B/Video_Games_stage1_sft_S3/final_checkpoint",
 +    "4B/RA":     f"{PROJ}/4B/Video_Games_stage2_act_1ep_S3/final_checkpoint",
-+    "4B/GRPO":   f"{HOME}/RecRL_Reasoning/Video_Games_stage3_rl_Qwen3-4B_S3/global_step_500/actor_merged",
++    "4B/GRPO":   f"{GRPO_ROOT}/RecRL_Reasoning/Video_Games_stage3_rl_Qwen3-4B_S3/global_step_500/actor_merged",
 +    # optional 1.7B S1 from-scratch reproduction (Games only):
 +    "1.7B-S1/SFT": f"{PROJ}/1.7B/Video_Games_stage1_sft_S1/final_checkpoint",
 +    "1.7B-S1/RA":  f"{PROJ}/1.7B/Video_Games_stage2_act_5ep_S1/final_checkpoint",
@@ -5642,6 +5610,8 @@ index 0000000..6130991
 +        print("\nDry run OK -- all paths valid.")
 +        return
 +
++    if not REPO_ID:
++        ap.error("Set HF_REPO_ID to the destination model repository before uploading.")
 +    login(token=os.environ.get("HF_TOKEN"))   # falls back to interactive if unset
 +    api = HfApi()
 +    api.create_repo(REPO_ID, repo_type="model", exist_ok=True)
@@ -5661,7 +5631,7 @@ new file mode 100644
 index 0000000..6f12618
 --- /dev/null
 +++ b/utils/summarize_item_side_diversity.py
-@@ -0,0 +1,280 @@
+@@ -0,0 +1,290 @@
 +import argparse
 +import json
 +import math
@@ -5693,15 +5663,25 @@ index 0000000..6f12618
 +    return float(-(probs * np.log(probs + 1e-12)).sum())
 +
 +
-+def _gini(counts):
++def _gini(counts, catalog_size):
++    """Exposure Gini over the full catalog, including unexposed items.
++
++    Zero exposures precede the sorted observed counts. Offset their ranks
++    rather than allocating a dense catalog-sized array. An all-zero exposure
++    vector returns 0.0, matching the SASRec evaluator's convention.
++    """
++    if catalog_size < len(counts) or catalog_size < 0:
++        raise ValueError("Catalog size cannot be smaller than the exposure counter")
 +    if not counts:
 +        return 0.0
 +    values = np.array(sorted(counts.values()), dtype=np.float64)
++    if not np.all(np.isfinite(values)) or np.any(values < 0):
++        raise ValueError("Exposure counts must be finite and nonnegative")
 +    total = values.sum()
 +    if total == 0:
 +        return 0.0
-+    n = len(values)
-+    index = np.arange(1, n + 1)
++    n = catalog_size
++    index = np.arange(n - len(values) + 1, n + 1)
 +    return float((2 * np.sum(index * values) / (n * total)) - ((n + 1) / n))
 +
 +
@@ -5750,7 +5730,7 @@ index 0000000..6f12618
 +        "NDCG@10": ndcg / n,
 +        "Coverage@10": len(counts) / catalog_size,
 +        "Entropy@10": _entropy(counts),
-+        "Gini@10": _gini(counts),
++        "Gini@10": _gini(counts, catalog_size),
 +    }
 +
 +
@@ -5851,7 +5831,7 @@ index 0000000..6f12618
 +        lines.append("- Not enough completed rows yet for comparative interpretation.")
 +    lines.append("")
 +    lines.append(
-+        "Lower Gini@10 indicates less concentrated exposure among recommended items; higher Coverage@10 and Entropy@10 indicate broader item-side exposure."
++        "Lower Gini@10 indicates less concentrated exposure across the full catalog; higher Coverage@10 and Entropy@10 indicate broader item-side exposure."
 +    )
 +    return lines
 +
