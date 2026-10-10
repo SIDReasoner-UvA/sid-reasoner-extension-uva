@@ -2,6 +2,14 @@ diff --git a/Makefile b/Makefile
 index 11b53ca..401f60f 100644
 --- a/Makefile
 +++ b/Makefile
+@@ -3,6 +3,6 @@
+ UV ?= uv
+ export UV_CACHE_DIR ?= .cache/uv
+-DATA_FILE_ID ?= 1S92QvaEs7aAhCwWOUovyb4y5P-pXwUhH
++DATA_FILE_ID ?= 1etg1e8oStGOjsg1Vr15vFnjlTMUx4Htz
+ DATA_ARCHIVE ?= data/sidreasoner_amazon_dataset.zip
+ DATA_DIR ?= data/Amazon
+ DATA_TMP ?= data/.extract_tmp
 @@ -31,7 +31,7 @@ data:
  	rm -rf "$(DATA_TMP)"
  	mkdir -p "$(DATA_TMP)"
