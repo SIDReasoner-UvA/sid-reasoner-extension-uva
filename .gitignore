@@ -42,6 +42,7 @@ data/
 *.csv
 
 
+
 # SLURM
 jobs/outputs/
 *.out

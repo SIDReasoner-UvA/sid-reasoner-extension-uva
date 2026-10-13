@@ -14,16 +14,17 @@ Three exposure metrics are computed over the top-10 lists (added to the modified
 | `Entropy@10` | entropy of the item-exposure distribution | higher (more evenly spread) |
 | `Gini@10` | concentration of exposure among a few items | lower (less concentrated) |
 
-Historical Games results, mean ± std over seeds 42, 43, and 44.
-**The SIDReasoner Gini column uses the old exposed-item definition and awaits
-rescoring with the corrected full-catalog metric.**
+Games results in Figure 3 use means and standard deviations over seeds 42, 43,
+and 44. Relative changes reported in the paper:
 
-| Model | Decoding | R@10 ↑ | N@10 ↑ | Coverage@10 ↑ | Entropy@10 ↑ | Gini@10 ↓ |
-|-------|----------|--------|--------|----------------|--------------|-----------|
-| SASRec | — | 0.092 ± 0.004 | 0.052 ± 0.004 | 0.760 ± 0.123 | 6.505 ± 0.499 | 0.830 ± 0.074 |
-| SIDReasoner | `beam10` | 0.102 ± 0.000 | 0.054 ± 0.000 | 0.738 ± 0.000 | 6.855 ± 0.000 | 0.714 ± 0.000 |
-| SIDReasoner | `sample_t12_p095` | 0.062 ± 0.001 | 0.035 ± 0.001 | 0.888 ± 0.002 | 7.223 ± 0.002 | 0.659 ± 0.001 |
-| SIDReasoner | `sample_t10_k50` | 0.062 ± 0.002 | 0.036 ± 0.001 | 0.888 ± 0.002 | 7.138 ± 0.004 | 0.679 ± 0.001 |
+| Method | Reference | ΔR@10 | ΔCoverage@10 | ΔGini@10 |
+|---|---|---|---|---|
+| SIDReasoner beam search | SASRec | +14.5% | -2.8% | -5.0% |
+| SIDReasoner top-p | SIDReasoner beam search | -38.5% | +20.9% | -11.8% |
+| SIDReasoner top-k | SIDReasoner beam search | -40.9% | +20.3% | -9.5% |
+
+Gini includes unexposed catalog entries. Exposure units are SIDs for SIDReasoner
+and item IDs for SASRec.
 
 The evaluation launcher now defaults to all stages (`STAGES="sft ra rl"`).
 The table builder recomputes every SIDReasoner row from per-seed prediction JSONs,
@@ -35,7 +36,7 @@ Existing predictions can be rescored without retraining or rerunning generation:
 from the patched submodule root, run
 `$PYTHON_CMD utils/make_rq5_diversity_tables.py` once the catalog info files and
 SFT/RA/RL prediction JSONs for all seeds and decoders are in their expected paths.
-This checkout contains no predictions, so corrected paper measurements are pending.
+
 
 ### Reproduce
 

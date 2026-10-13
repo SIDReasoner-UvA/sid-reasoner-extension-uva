@@ -1,36 +1,36 @@
-# SIDReasoner reproduction — results table
+# Model-size results
 
-HR@10 / NDCG@10, our greedy think-mode eval (constrained beam-10). ★ = the reasoning-activation
-(RA) checkpoint that fed GRPO. Paper is Qwen3-1.7B; 0.6B and 4B are our scaling extension.
+Games, Figure 2. Qwen3-0.6B and Qwen3-4B report mean ± std over three seeds.
+The 1.7B reference is digitized from the original paper’s Figure 5.
 
-| Model | Dataset (ablation) | Stage | HR@5 | HR@10 | NDCG@5 | NDCG@10 |
-|---|---|---|---|---|---|---|
-| 0.6B | Games (S3) | SFT (raw align) | 0.0368 | 0.0645 | 0.0232 | 0.0320 |
-| 0.6B | Games (S3) | RA 1-epoch      | 0.0296 | 0.0495 | 0.0181 | 0.0247 |
-| 0.6B | Games (S3) | RA 5-epoch ★    | 0.0373 | 0.0501 | 0.0303 | 0.0345 |
-| 0.6B | Games (S3) | GRPO (step 500) | 0.0571 | 0.0734 | 0.0448 | 0.0500 |
-| 4B   | Games (S3) | SFT (raw align) | 0.0363 | 0.0628 | 0.0234 | 0.0319 |
-| 4B   | Games (S3) | RA 1-epoch ★    | 0.0295 | 0.0532 | 0.0181 | 0.0256 |
-| 4B   | Games (S3) | RA 5-epoch      | 0.0200 | 0.0316 | 0.0144 | 0.0181 |
-| 4B   | Games (S3) | GRPO (step 500) |   —    | 0.0658 |   —    | 0.0364 |
-| 1.7B | Games (S1) | SFT (raw align) | 0.0215 | 0.0387 | 0.0129 | 0.0184 |
-| 1.7B | Games (S1) | RA 5-epoch      | 0.0321 | 0.0602 | 0.0187 | 0.0277 |
+## R@10
 
-Paper (Qwen3-1.7B), before-RL (RA) / after-RL (GRPO), HR@10:
-- Games S3: 0.0806 / 0.1031   - Games S1: 0.0414 / 0.0741
+| RL step | 0.6B | 4B | 1.7B reference |
+|---|---|---|---|
+| 0 | 0.0528 ± 0.0000 | 0.0545 ± 0.0012 | 0.087 |
+| 50 | — | — | 0.092 |
+| 100 | 0.0373 ± 0.0010 | 0.0506 ± 0.0014 | 0.095 |
+| 150 | — | — | 0.097 |
+| 200 | 0.0676 ± 0.0008 | 0.0682 ± 0.0088 | 0.099 |
+| 250 | — | — | 0.101 |
+| 300 | 0.0680 ± 0.0077 | 0.0629 ± 0.0037 | 0.0995 |
+| 350 | — | — | 0.102 |
+| 400 | 0.0728 ± 0.0009 | 0.0660 ± 0.0024 | 0.103 |
+| 450 | — | — | 0.1035 |
+| 500 | 0.0622 ± 0.0113 | 0.0661 ± 0.0020 | 0.1031 |
 
-## Interpretation in the revised paper (RQ4)
+## Chain-of-thought length (tokens)
 
-- R@10 improves and plateaus during GRPO as CoT length decreases and stabilizes.
-  These qualitative trends persist across the tested backbone sizes (Figure 2).
-- The 4B run has no advantage over 0.6B in these single-seed, untuned comparisons.
-  The absolute gap to the original 1.7B result does not by itself identify its cause.
-- At 4B, five RA epochs reduce R@10 by about 41% relative to one epoch; at 0.6B the
-  epoch variants are close. This motivates the size-dependent choices used here.
-- The 1.7B S1 retraining reproduces the SFT → RA improvement. The original 0.0414
-  reference is pre-RL/RA, not a separately reported post-SFT score.
-- The 4B run is non-monotonic: report the validation-selected step 500 (0.0658),
-  not the test peak at step 200 (0.0697). See the suite README for scope and costs.
-
-Notes: HR@5/N@5 for 4B GRPO not extracted here (only HR@10/N@10 from figure5_4B.csv). All numbers reproducible via
-the submodule's `scripts/evaluate_models_in_dir.sh` (cached) + `utils/collect_eval_metrics.py`.
+| RL step | 0.6B | 4B | 1.7B reference |
+|---|---|---|---|
+| 0 | — | — | 168 |
+| 50 | 203 ± 0 | 587.6 ± 3.5 | 166 |
+| 100 | 192 ± 1 | 274.7 ± 3.8 | 163 |
+| 150 | — | 206.3 ± 3.2 | 160.5 |
+| 200 | 138 ± 7 | 142.9 ± 3.2 | 158.5 |
+| 250 | — | — | 156 |
+| 300 | 113 ± 5 | 81.0 ± 3.0 | 154 |
+| 350 | — | — | 153.5 |
+| 400 | 106 ± 6 | 59.4 ± 3.3 | 154 |
+| 450 | — | — | 155.5 |
+| 500 | 102 ± 7 | 51.6 ± 2.2 | 157 |
