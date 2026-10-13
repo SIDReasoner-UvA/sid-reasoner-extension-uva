@@ -11,8 +11,5 @@ Suite names mirror [CODE-STRUCTURE.md](../CODE-STRUCTURE.md).
 | [model_size](model_size/README.md) | RQ4 | How does backbone scale influence behavior? | §6, Figure 2, Appendix D |
 | [diversity](diversity/README.md) | RQ5 | How do decoding strategies affect item exposure? | §6, Figure 3 |
 
-Submission-specific changes and outstanding artifact requirements are listed in
-[SUBMISSION.md](../SUBMISSION.md).
-
 Pipeline stages SFT / RA / GRPO are distinct from the original paper's S1/S3
 data-ablation labels. `HR@K` equals Recall@K for the single-target test protocol.
