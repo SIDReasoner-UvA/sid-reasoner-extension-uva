@@ -54,8 +54,9 @@ sbatch jobs/common/setup_env.sh            # add --sglang / --megatron / --all f
 **4. Download data and checkpoints.** The wrapper uses `data/raw/<slug>/` and
 `data/checkpoints/`. Submodule launchers instead use `data/Amazon/` and `pretrained/`
 inside the submodule. These directories are git-ignored. The commands below populate
-the wrapper layout only; see [data and checkpoint layout](SUBMISSION.md#data-and-checkpoint-layout)
-before launching the other suites. Each dataset call extracts the full shared archive;
+the wrapper layout only. For native launchers, place data under the SIDReasoner
+baseline’s `data/Amazon/` directory and checkpoints under `pretrained/`, or set the
+launcher path overrides. Each dataset call extracts the full shared archive;
 the baseline Makefile does not filter by category.
 
 ```bash
