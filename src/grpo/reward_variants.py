@@ -187,7 +187,7 @@ class RewardA2SweepLambda(BaseRewardComputer):
 # A3 — Linear / partial-credit accuracy
 # Change   : R_sr = 0.33·[a1=g1] + 0.33·[a1=g1 & a2=g2] + 0.34·[all match]
 #            (additive, not multiplicative)
-# Author-confirmed weights: cumulative prefix credit is 0, 0.33, 0.66, 1.0.
+# Implemented weights: cumulative prefix credit is 0, 0.33, 0.66, 1.0.
 # This implementation defines the reward used for the reported experiments.
 # Hypothesis: Does softer, more linear reward shaping beat the steep ×2
 #             doubling? Reduces reward sparsity by rewarding partial matches

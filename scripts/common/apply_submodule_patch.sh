@@ -1,7 +1,7 @@
 #!/bin/bash
 # Apply our local modifications to the SIDReasoner submodule WITHOUT committing
 # them into the submodule. The submodule stays pinned at the upstream commit
-# (github.com/pedrocurvo/SIDReasoner); all changes live in this repo as
+# recorded by the parent repository; all changes live here as
 # patches/common/sidreasoner-local.patch and are materialised into the
 # submodule's working tree here.
 #

@@ -1,19 +1,6 @@
-# Component-Necessity Experiments
+# Component experiments
 
-> **RQ2: Are RL and explicit reasoning strictly necessary?** Starting from the authors' reasoning-activation (RA)
-> checkpoint, we test whether the post-RA gains require the GRPO reinforcement-learning stage
-> specifically, or whether they can be recovered by more supervised training or stronger
-> decoding; and we test whether the explicit `<think>…</think>` reasoning scaffold is actually
-> responsible for the reported improvements.
-
-This suite asks *which ingredients of the SIDReasoner recipe actually do the work*. The
-GRPO suite ([`../grpo/`](../grpo/README.md)) asks how sensitive the RL stage is to its reward;
-this suite asks the prior question of whether the RL stage and the reasoning scaffold are
-needed at all. The two findings are complementary: components shows the RL stage is necessary
-but the reasoning scaffold is only conditionally necessary; GRPO shows that *given* the RL
-stage, reward edits have small top-10 effects but can improve rank-1 accuracy.
-
----
+Qwen3-1.7B continuation and prompt ablations on Games, Office, and Industrial.
 
 ## Pipeline context
 
@@ -22,50 +9,33 @@ SIDReasoner trains in three stages:
 | Stage | Name | Purpose | Checkpoint |
 |-------|------|---------|------------|
 | S1 | SFT | Teach the model to emit valid Semantic IDs (SIDs). | `sidreasoner_sft_*` |
-| S2 | Reasoning-activation (RA) | Teach the model to wrap its answer in `<think>…</think>` before the SID. | `sidreasoner_ra_*` |
+| S2 | Reasoning-activation (RA) | Generate a rationale inside `<think>…</think>`, followed by the SID. | `sidreasoner_ra_*` |
 | S3 | GRPO RL | Reinforce the policy so reasoning leads to correct recommendations. | post-GRPO |
 
-Every experiment here **branches from the authors' S2 / RA checkpoint** so that each branch
-isolates one continuation choice. The RA checkpoint is the common ancestor; the questions are
-"what should come *after* it?" and "does the reasoning behaviour S2 installed matter at
-inference?".
+The continuation controls start from the released RA checkpoint. Inference ablations
+evaluate both RA and post-GRPO checkpoints.
 
 Backbone: `Qwen/Qwen3-1.7B` (the original paper's setting). Datasets: `Video Games`,
 `Office Products`, `Industrial & Scientific`.
 
----
-
-## The two questions
-
-| Axis | What it tests | Method |
-|------|---------------|--------|
-| **(A) Is RL necessary?** | Can the post-GRPO gain be recovered *without* RL — by more SFT, more RA, or a bigger inference search? | Train non-RL continuations from RA; compare to RA + GRPO. Also sweep decoding over the pre-RL checkpoint. |
-| **(B) Is explicit reasoning necessary?** | Does removing / changing the `<think>` scaffold hurt? | Re-evaluate fixed checkpoints with the reasoning instruction and scaffold removed or reworded. |
-
----
-
 ## Experiments
 
-### C1 — Can non-RL continuations replace GRPO? (RL necessity)
+### C1 — Supervised continuations
 
 From the RA checkpoint, train two non-RL continuations and compare them to the actual
 post-GRPO checkpoint, with deltas measured relative to RA on the same dataset:
 
 - **Extra SFT** — continue supervised fine-tuning from RA for three epochs.
 - **Extra RA** — continue reasoning-activation training from RA for ten epochs.
-- **RA + RL** — the real GRPO continuation (the SIDReasoner recipe).
+- **RA + RL** — GRPO continuation.
 
-Both controls select the best epoch by validation loss, as confirmed by the authors.
+Both controls select the best epoch by validation loss (Appendix B).
 The launcher sets `LOAD_BEST_MODEL_AT_END=True` for extra SFT and extra RA.
 Extra SFT retains its epoch checkpoints for diagnostics; the main evaluation uses
 its `final_checkpoint`, containing the restored best model. This selection applies to
 continuations from an already activated model, not cold-start RA.
 
-All continuations still produce **valid** SIDs, so any gap is not explained by malformed
-output — it is an *objective-mismatch* effect: SFT and RA optimize imitation-style losses,
-while GRPO directly optimizes a reward tied to recommendation correctness.
-
-**Result (revised Table 2; relative percentage changes versus RA):**
+Relative percentage changes are measured against the RA checkpoint.
 
 | Dataset | Checkpoint | R@10 | NDCG@10 | ΔR@10 (%) | ΔNDCG@10 (%) |
 |---|---|---|---|---|---|
@@ -78,36 +48,33 @@ while GRPO directly optimizes a reward tied to recommendation correctness.
 | Office | Extra RA | 0.1424 | 0.1028 | +0.0 | +0.5 |
 | Office | **RA + RL** | **0.1661** | **0.1202** | **+16.6** | **+17.5** |
 
-**Finding.** GRPO is the **only** continuation that consistently improves over RA. On Games
-the non-RL continuations degrade *below* RA; on Office they roughly hold RA but the post-GRPO
-checkpoint is clearly best. The RL stage is **not** equivalent to "more training".
+Checkpoint names for the accompanying artifact package:
 
-The non-RL continuation checkpoints (extra-SFT / extra-RA from RA) are on the Hugging Face Hub:
+*Video_Games_extra_sft_Qwen3-1.7B*
 
-| Dataset | Extra SFT | Extra RA |
-|---|---|---|
-| Video Games | [`Video_Games_extra_sft_Qwen3-1.7B`](https://huggingface.co/edovergna/Video_Games_extra_sft_Qwen3-1.7B) | [`Video_Games_extra_ra_Qwen3-1.7B`](https://huggingface.co/edovergna/Video_Games_extra_ra_Qwen3-1.7B) |
-| Office Products | [`Office_Products_extra_sft_Qwen3-1.7B`](https://huggingface.co/edovergna/Office_Products_extra_sft_Qwen3-1.7B) | [`Office_Products_extra_ra_Qwen3-1.7B`](https://huggingface.co/edovergna/Office_Products_extra_ra_Qwen3-1.7B) |
+*Video_Games_extra_ra_Qwen3-1.7B*
 
-### C2 — Inference-time search over the pre-RL checkpoint (rules out a search explanation)
+*Office_Products_extra_sft_Qwen3-1.7B*
 
-Could the post-GRPO gain just be a wider decoding budget that RL happens to approximate? We
-evaluate larger beams and stochastic search over the **Video Games RA (pre-RL)** checkpoint:
+*Office_Products_extra_ra_Qwen3-1.7B*
 
-- Best pre-RL top-10 remained plain `beam10`: R@10 = 0.0876, NDCG@10 = 0.0474.
-- `beam20` $\to$ R@10 0.0842; `beam50` $\to$ R@10 0.0822 (wider beams *hurt*).
-- Sampling variants also failed to close the gap; some beam-sampling configs produced many
-  invalid predictions.
-- Post-GRPO `beam10` stays ahead at R@10 = 0.1024, NDCG@10 = 0.0546.
+### C2 — Pre-RL decoding
 
-**Finding.** RL is not merely substituting for a larger inference search budget.
+Decoding results for the Video Games RA checkpoint:
 
-### C3 — Removing the explicit-reasoning scaffold (reasoning necessity)
+| Checkpoint | Decoder | R@10 | NDCG@10 |
+|---|---|---|---|
+| RA | beam10 | 0.0876 | 0.0474 |
+| RA | beam20 | 0.0842 | — |
+| RA | beam50 | 0.0822 | — |
+| Post-GRPO | beam10 | 0.1024 | 0.0546 |
+
+### C3 — Thinking and no-think evaluation
 
 Strict **no-think** ablation: the evaluator removes both the instruction to reason and the
 `<think>…</think>` scaffold, then re-runs the *same* checkpoints. Deltas are computed as
 **no-think $-$ thinking** from the displayed scores, so a negative value means
-thinking was better. This delta table is supplementary; the post-RL scores match Table 4.
+thinking was better.
 
 | Dataset | Checkpoint | T R@10 | No-T R@10 | $\Delta$R@10 | T NDCG@10 | No-T NDCG@10 | $\Delta$NDCG@10 |
 |---|---|---|---|---|---|---|---|
@@ -117,12 +84,7 @@ thinking was better. This delta table is supplementary; the post-RL scores match
 | Office | RL post-GRPO | 0.1661 | 0.1247 | $-0.0414$ | 0.1202 | 0.0974 | $-0.0228$ |
 | Industrial | RL post-GRPO | 0.1474 | 0.1366 | $-0.0108$ | 0.1014 | 0.0999 | $-0.0015$ |
 
-**Finding.** Reasoning is *strongly* beneficial only for **Office post-RL**, mildly beneficial
-for **Industrial** at R@10, and marginal for **Games**. Crucially, **before RL** strict
-no-think even *improves* R@10 on both Games and Office. So the scaffold's value is entangled
-with the RL stage and the dataset — it is not a universal win.
-
-### C4 — Prompt ablations (reasoning is sensitive to prompt *form*, not just presence)
+### C4 — Prompt ablations
 
 On the final post-RL checkpoints, compare four prompt conditions under deterministic
 constrained beam search (beam 10):
@@ -146,13 +108,6 @@ constrained beam search (beam 10):
 | Industrial | Strict no-think | 0.1366 | 0.0999 |
 | Industrial | **No step-by-step** | **0.1489** | **0.1079** |
 | Industrial | Preference summary | 0.1436 | 0.1024 |
-
-**Finding.** Performance is sensitive to prompt *format*, not simply to the presence of
-explicit reasoning: non-step-by-step or preference-summary prompts sometimes **match or beat**
-the original reasoning prompt. This weakens any broad claim that step-by-step reasoning is what
-produces the gains.
-
----
 
 ## Reproduce
 
@@ -183,20 +138,3 @@ Per-script options (datasets, checkpoints, decoders) and the assumed data/checkp
 layout are documented in `final_scripts/rq2_components/README.md` inside the submodule.
 
 ---
-
-## Bottom line
-
-- **The RL stage is necessary.** Replacing GRPO with extra SFT, extra RA, or stronger
-  inference-time search does **not** recover post-GRPO quality. The likely cause is
-  objective mismatch, not malformed output (non-RL continuations still emit valid SIDs).
-- **The explicit-reasoning scaffold is only conditionally necessary.** It helps mainly in
-  specific dataset/checkpoint settings (notably Office post-RL); before RL it can even hurt,
-  and alternative prompt forms can match it.
-- **Practical implication.** Spend effort on RL and on initialization quality; treat explicit
-  reasoning as a *conditional prompting choice* rather than a universally required component.
-
-**Caveats.** Qwen3-1.7B only; deltas are vs. the RA checkpoint per dataset; the RL-replacement
-table covers Games and Office; the reasoning ablations cover Games, Office, and Industrial with
-varying coverage per cell. The scaffold ablation tests inference-time formatting, not
-the value of reasoning supervision during training. C4 matches revised Table 4; C2 is
-a supplementary repository diagnostic, not a table in the revised appendix.

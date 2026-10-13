@@ -13,18 +13,21 @@ checkpoints. Full independent retraining of the 1.7B pipeline is outside this st
 
 ## Setup
 
-The experiments target a Slurm/GPU cluster (Snellius); the steps below are the order to run them
-in. Run everything from the repo root.
+The training jobs target a Slurm cluster with H100 GPUs. Run setup commands from the
+repository root. Submit dependent training stages only after the preceding job finishes.
 
 **1. Restore the baseline submodules.** The two baselines
-(`baselines/repos/SIDReasoner`, `baselines/repos/SASRec`) are public git submodules — clone with
-`--recursive`, or fetch their contents after a plain clone / unzip:
+(`baselines/repos/SIDReasoner`, `baselines/repos/SASRec`) are git submodules.
+In a Git checkout, initialize them with:
 
 ```bash
-git clone --recursive https://github.com/SIDReasoner-UvA/sid-reasoner-extension-uva.git
-# or, if already cloned:
 git submodule update --init --recursive
 ```
+
+A source zip does not include submodule contents or support `git submodule update`.
+An anonymous distribution must include reviewed baseline source snapshots; see
+[submission preparation](SUBMISSION.md). The current submodule URLs
+still identify contributor-controlled repositories.
 
 **2. Apply the working-tree patch.** Four of the five suites (`reproduction`, `components`,
 `model_size`, `diversity`) run from scripts that live *inside* the SIDReasoner submodule, because
@@ -50,8 +53,12 @@ submodule and re-applies the patch first:
 sbatch jobs/common/setup_env.sh            # add --sglang / --megatron / --all for extras
 ```
 
-**4. Download data and checkpoints.** Amazon review datasets land under `data/raw/<slug>/`;
-author checkpoints under `data/checkpoints/` (both are git-ignored and absent from the zip):
+**4. Download data and checkpoints.** The wrapper uses `data/raw/<slug>/` and
+`data/checkpoints/`. Submodule launchers instead use `data/Amazon/` and `pretrained/`
+inside the submodule. These directories are git-ignored. The commands below populate
+the wrapper layout only; see [data and checkpoint layout](SUBMISSION.md#data-and-checkpoint-layout)
+before launching the other suites. Each dataset call extracts the full shared archive;
+the baseline Makefile does not filter by category.
 
 ```bash
 # Datasets (delegates to the SIDReasoner Makefile):
@@ -76,7 +83,7 @@ doc — see the **Docs** column below.
 | Stage | Name | Purpose | Checkpoint |
 |-------|------|---------|------------|
 | S1 | SFT | Emit valid Semantic IDs. | `sidreasoner_sft_*` |
-| S2 | Reasoning-activation (RA) | Wrap the answer in `<think>…</think>` before the SID. | `sidreasoner_ra_*` |
+| S2 | Reasoning-activation (RA) | Generate a rationale inside `<think>…</think>`, followed by the SID. | `sidreasoner_ra_*` |
 | S3 | GRPO RL | Reinforce so reasoning leads to correct recommendations. | post-GRPO |
 
 Backbone: `Qwen/Qwen3-1.7B`. Datasets: Amazon `Video Games`, `Office Products`,
@@ -88,18 +95,15 @@ full-item ranking). Primary metrics: Recall@{5,10}, NDCG@{5,10}.
 The study is organized into five suites, one per research question. The code tree and `docs/`
 mirror these names (see [`CODE-STRUCTURE.md`](CODE-STRUCTURE.md)).
 
-| Suite | RQ | Question | Headline finding | Docs |
-|-------|----|----------|------------------|------|
-| `reproduction` | RQ1 | Can released artifacts recover the reported results, and can partial pre-RL retraining recover the early-stage trends? | Released scores reproduce; early-stage retraining exposes an RA epoch/checkpoint-selection discrepancy. | [docs](docs/reproduction/README.md) |
-| `components` | RQ2 | Are RL and explicit reasoning strictly necessary? | Extra supervised training does not recover RL gains; scaffold benefits depend on dataset and checkpoint. | [docs](docs/components/README.md) |
-| `grpo` | RQ3 | Is the GRPO reward formulation a sensitive design choice? | Top-10 quality is stable; removing the format term or using linear credit improves rank-1 accuracy. | [docs](docs/grpo/README.md) |
-| `model_size` | RQ4 | How does backbone scale influence behavior? | GRPO accuracy/CoT trends persist across sizes; 4B shows no advantage over 0.6B in these runs. | [docs](docs/model_size/README.md) |
-| `diversity` | RQ5 | How do decoding strategies affect item exposure? | Beam search offers the strongest tested accuracy–exposure compromise; sampling broadens coverage at a large accuracy cost. | [docs](docs/diversity/README.md) |
+| Suite | RQ | Question | Docs |
+|-------|----|----------|------|
+| `reproduction` | RQ1 | Can released artifacts recover the reported results, and can partial pre-RL retraining recover the early-stage trends? | [docs](docs/reproduction/README.md) |
+| `components` | RQ2 | Are RL and explicit reasoning strictly necessary? | [docs](docs/components/README.md) |
+| `grpo` | RQ3 | Is the GRPO reward formulation a sensitive design choice? | [docs](docs/grpo/README.md) |
+| `model_size` | RQ4 | How does backbone scale influence behavior? | [docs](docs/model_size/README.md) |
+| `diversity` | RQ5 | How do decoding strategies affect item exposure? | [docs](docs/diversity/README.md) |
 
 RQ1–RQ2 are the reproduction analyses (§5); RQ3–RQ5 are extensions (§6).
-The historical submodule directory `rq3_model_size/` implements **current RQ4**;
-its name is retained for compatibility with existing jobs and artifacts.
-See the [paper alignment audit](docs/paper-alignment.md) for confirmed setup decisions and artifact coverage.
 `HR@K` in code/results is Recall@K here because each test case has one target item.
 Pipeline stages 1–3 are distinct from the original paper's S1/S3 *data ablation* labels.
 
@@ -108,22 +112,19 @@ All five suites are written up — start with the **Docs** link in each row abov
 
 ## Repository layout
 
-The repo is organized **by experiment suite**. Each top-level work directory splits into a
-`common/` folder (shared code) plus one folder per suite (`reproduction/ components/ grpo/
-model_size/ diversity/`). `grpo` is wrapper-native (its configs/jobs/`src` live here); the other
-four suites run from scripts inside the SIDReasoner submodule, materialised by the working-tree
-patch (see [Setup](#setup) above).
+GRPO configs, jobs, and reward code live in this repository. The other four suites
+use launchers inside the SIDReasoner submodule, added by the common patch.
+Experiment documentation is in `docs/<suite>/`.
 
 | Directory | Contents |
 |-----------|----------|
 | `baselines/` | Baseline repos (submodules under `repos/`) + uniform `adapters/`. |
-| `configs/` | YAML experiment configs (`configs/<suite>/<variant>/<dataset>.yaml`). |
+| `configs/` | YAML experiment configs (`configs/grpo/<variant>/<dataset>.yaml`). |
 | `data/` | `raw/ processed/ enriched/` datasets, SID mappings, checkpoints. |
-| `scripts/` | Entry points — `common/` (eval, train, data prep) + per-suite. |
+| `scripts/` | Shared evaluation, training, and data-preparation entry points under `common/`. |
 | `src/` | Importable library — `src.common.*`, `src.<suite>.*`. |
 | `jobs/` | Slurm job files. |
 | `results/` | Metrics + prediction files, mirroring `configs/`. |
-| `reports/` | Written-up results. |
 | `patches/` | Local submodule modifications. |
 | `docs/` | Per-suite documentation (`docs/<suite>/`). |
 

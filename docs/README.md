@@ -1,6 +1,6 @@
 # Documentation Index
 
-The revised paper organizes reproduction as RQ1–RQ2 (§5) and extensions as RQ3–RQ5 (§6).
+The experiment suites cover reproduction as RQ1–RQ2 (§5) and extensions as RQ3–RQ5 (§6).
 Suite names mirror [CODE-STRUCTURE.md](../CODE-STRUCTURE.md).
 
 | Suite | RQ | Research question | Paper location |
@@ -11,17 +11,8 @@ Suite names mirror [CODE-STRUCTURE.md](../CODE-STRUCTURE.md).
 | [model_size](model_size/README.md) | RQ4 | How does backbone scale influence behavior? | §6, Figure 2, Appendix D |
 | [diversity](diversity/README.md) | RQ5 | How do decoding strategies affect item exposure? | §6, Figure 3 |
 
-`rq3_model_size/` is a historical executable path for **current RQ4**, retained for
-compatibility. The revised introduction and body now use the same five RQs.
+Submission-specific changes and outstanding artifact requirements are listed in
+[SUBMISSION.md](../SUBMISSION.md).
 
-The [alignment audit](paper-alignment.md) records changes and author-confirmed resolutions
-between `ECIR_Paper_revised-3.pdf` and committed experiment artifacts. The PDF is not
-vendored in this repository. Historical run notes retain their provenance; current
-suite READMEs give the paper's interpretation and identify any unverified details.
-
-When updating documentation, distinguish the original SIDReasoner paper from this
-reproducibility paper. Use the revised paper as the authoritative source for reported numbers and its
-printed precision. Label supplementary run diagnostics separately; do not rewrite raw
-evaluation outputs or reward computation to force a match. Distinguish pipeline stages SFT / RA / GRPO from the
-original S1/S3 data-ablation labels. `HR@K` equals Recall@K for the single-target test
-protocol. Use validation data for checkpoint selection; reserve test data for reporting.
+Pipeline stages SFT / RA / GRPO are distinct from the original paper's S1/S3
+data-ablation labels. `HR@K` equals Recall@K for the single-target test protocol.

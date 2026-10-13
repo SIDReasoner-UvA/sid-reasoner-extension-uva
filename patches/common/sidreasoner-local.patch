@@ -619,7 +619,7 @@ index 0000000..96934f2
 +
 +- `rq1_reproduction/`: early-stage reproduction (RQ1).
 +- `rq2_components/`: component necessity experiments (RQ2).
-+- `rq3_model_size/`: model-scale experiments (current RQ4; legacy directory name).
++- `rq4_model_size/`: model-scale experiments (RQ4).
 +- `rq5_diversity/`: item-side diversity experiments (RQ5 / Figure 3).
 +
 +See the main repository README for setup and artifact-layout requirements. These launchers require data and checkpoints in the submodule layout.
@@ -2170,11 +2170,11 @@ index 0000000..ca82b51
 +        unset OUTPUT_DIR RUN_NAME NUM_EPOCHS
 +    done
 +done
-diff --git a/final_scripts/rq3_model_size/RL_training_S3_0p6B_Games.sh b/final_scripts/rq3_model_size/RL_training_S3_0p6B_Games.sh
+diff --git a/final_scripts/rq4_model_size/RL_training_S3_0p6B_Games.sh b/final_scripts/rq4_model_size/RL_training_S3_0p6B_Games.sh
 new file mode 100644
 index 0000000..e144a01
 --- /dev/null
-+++ b/final_scripts/rq3_model_size/RL_training_S3_0p6B_Games.sh
++++ b/final_scripts/rq4_model_size/RL_training_S3_0p6B_Games.sh
 @@ -0,0 +1,73 @@
 +#!/bin/bash
 +#SBATCH --partition=gpu_h100
@@ -2249,11 +2249,11 @@ index 0000000..e144a01
 +    trainer.test_freq=50 \
 +    trainer.total_epochs=10 "$@"
 +} 2>&1 | tee "${log_file}"
-diff --git a/final_scripts/rq3_model_size/RL_training_S3_4B_Games.sh b/final_scripts/rq3_model_size/RL_training_S3_4B_Games.sh
+diff --git a/final_scripts/rq4_model_size/RL_training_S3_4B_Games.sh b/final_scripts/rq4_model_size/RL_training_S3_4B_Games.sh
 new file mode 100644
 index 0000000..47841e9
 --- /dev/null
-+++ b/final_scripts/rq3_model_size/RL_training_S3_4B_Games.sh
++++ b/final_scripts/rq4_model_size/RL_training_S3_4B_Games.sh
 @@ -0,0 +1,79 @@
 +#!/bin/bash
 +#SBATCH --partition=gpu_h100
@@ -2334,11 +2334,11 @@ index 0000000..47841e9
 +    trainer.test_freq=50 \
 +    trainer.total_epochs=10 "$@"
 +} 2>&1 | tee "${log_file}"
-diff --git a/final_scripts/rq3_model_size/evaluate_Qwen3_think_S3_0p6B_Games.sh b/final_scripts/rq3_model_size/evaluate_Qwen3_think_S3_0p6B_Games.sh
+diff --git a/final_scripts/rq4_model_size/evaluate_Qwen3_think_S3_0p6B_Games.sh b/final_scripts/rq4_model_size/evaluate_Qwen3_think_S3_0p6B_Games.sh
 new file mode 100644
 index 0000000..68818b4
 --- /dev/null
-+++ b/final_scripts/rq3_model_size/evaluate_Qwen3_think_S3_0p6B_Games.sh
++++ b/final_scripts/rq4_model_size/evaluate_Qwen3_think_S3_0p6B_Games.sh
 @@ -0,0 +1,154 @@
 +#!/bin/bash
 +#SBATCH --partition=gpu_h100
@@ -2494,11 +2494,11 @@ index 0000000..68818b4
 +done
 +
 +echo "All categories processed!"
-diff --git a/final_scripts/rq3_model_size/evaluate_Qwen3_think_S3_0p6B_Games_ALL.sh b/final_scripts/rq3_model_size/evaluate_Qwen3_think_S3_0p6B_Games_ALL.sh
+diff --git a/final_scripts/rq4_model_size/evaluate_Qwen3_think_S3_0p6B_Games_ALL.sh b/final_scripts/rq4_model_size/evaluate_Qwen3_think_S3_0p6B_Games_ALL.sh
 new file mode 100644
 index 0000000..7920f7f
 --- /dev/null
-+++ b/final_scripts/rq3_model_size/evaluate_Qwen3_think_S3_0p6B_Games_ALL.sh
++++ b/final_scripts/rq4_model_size/evaluate_Qwen3_think_S3_0p6B_Games_ALL.sh
 @@ -0,0 +1,143 @@
 +#!/bin/bash
 +#SBATCH --partition=gpu_h100
@@ -2643,11 +2643,11 @@ index 0000000..7920f7f
 +
 +echo "All checkpoints processed!"
 +echo "Now run:  ${PYTHON_CMD} ./utils/collect_eval_metrics.py --results_dir ./results --category ${CATEGORY} --info_file ${INFO_FILE} --tokenizer ${STAGE2_MODEL} --out ./results/figure5_0p6B.csv"
-diff --git a/final_scripts/rq3_model_size/evaluate_Qwen3_think_S3_4B_Games.sh b/final_scripts/rq3_model_size/evaluate_Qwen3_think_S3_4B_Games.sh
+diff --git a/final_scripts/rq4_model_size/evaluate_Qwen3_think_S3_4B_Games.sh b/final_scripts/rq4_model_size/evaluate_Qwen3_think_S3_4B_Games.sh
 new file mode 100644
 index 0000000..3f120c3
 --- /dev/null
-+++ b/final_scripts/rq3_model_size/evaluate_Qwen3_think_S3_4B_Games.sh
++++ b/final_scripts/rq4_model_size/evaluate_Qwen3_think_S3_4B_Games.sh
 @@ -0,0 +1,153 @@
 +#!/bin/bash
 +#SBATCH --partition=gpu_h100
@@ -2802,11 +2802,11 @@ index 0000000..3f120c3
 +done
 +
 +echo "All categories processed!"
-diff --git a/final_scripts/rq3_model_size/sft_Qwen3_S3_0p6B_Games.sh b/final_scripts/rq3_model_size/sft_Qwen3_S3_0p6B_Games.sh
+diff --git a/final_scripts/rq4_model_size/sft_Qwen3_S3_0p6B_Games.sh b/final_scripts/rq4_model_size/sft_Qwen3_S3_0p6B_Games.sh
 new file mode 100644
 index 0000000..6ee3a69
 --- /dev/null
-+++ b/final_scripts/rq3_model_size/sft_Qwen3_S3_0p6B_Games.sh
++++ b/final_scripts/rq4_model_size/sft_Qwen3_S3_0p6B_Games.sh
 @@ -0,0 +1,67 @@
 +#!/bin/bash
 +#SBATCH --partition=gpu_h100
@@ -2875,11 +2875,11 @@ index 0000000..6ee3a69
 +    --group_by_length True \
 +    "$@"
 +} 2>&1 | tee "${LOG_FILE}"
-diff --git a/final_scripts/rq3_model_size/sft_Qwen3_S3_4B_Games.sh b/final_scripts/rq3_model_size/sft_Qwen3_S3_4B_Games.sh
+diff --git a/final_scripts/rq4_model_size/sft_Qwen3_S3_4B_Games.sh b/final_scripts/rq4_model_size/sft_Qwen3_S3_4B_Games.sh
 new file mode 100644
 index 0000000..a269777
 --- /dev/null
-+++ b/final_scripts/rq3_model_size/sft_Qwen3_S3_4B_Games.sh
++++ b/final_scripts/rq4_model_size/sft_Qwen3_S3_4B_Games.sh
 @@ -0,0 +1,70 @@
 +#!/bin/bash
 +#SBATCH --partition=gpu_h100
@@ -2951,11 +2951,11 @@ index 0000000..a269777
 +    --group_by_length True \
 +    "$@"
 +} 2>&1 | tee "${LOG_FILE}"
-diff --git a/final_scripts/rq3_model_size/sft_reasoning_activation_S3_0p6B_Games.sh b/final_scripts/rq3_model_size/sft_reasoning_activation_S3_0p6B_Games.sh
+diff --git a/final_scripts/rq4_model_size/sft_reasoning_activation_S3_0p6B_Games.sh b/final_scripts/rq4_model_size/sft_reasoning_activation_S3_0p6B_Games.sh
 new file mode 100644
 index 0000000..63129dc
 --- /dev/null
-+++ b/final_scripts/rq3_model_size/sft_reasoning_activation_S3_0p6B_Games.sh
++++ b/final_scripts/rq4_model_size/sft_reasoning_activation_S3_0p6B_Games.sh
 @@ -0,0 +1,62 @@
 +#!/bin/bash
 +#SBATCH --partition=gpu_h100
@@ -3019,11 +3019,11 @@ index 0000000..63129dc
 +    --train_new_token_embeddings_only False \
 +    "$@"
 +} 2>&1 | tee "${LOG_FILE}"
-diff --git a/final_scripts/rq3_model_size/sft_reasoning_activation_S3_0p6B_Games_1ep.sh b/final_scripts/rq3_model_size/sft_reasoning_activation_S3_0p6B_Games_1ep.sh
+diff --git a/final_scripts/rq4_model_size/sft_reasoning_activation_S3_0p6B_Games_1ep.sh b/final_scripts/rq4_model_size/sft_reasoning_activation_S3_0p6B_Games_1ep.sh
 new file mode 100644
 index 0000000..3065fc2
 --- /dev/null
-+++ b/final_scripts/rq3_model_size/sft_reasoning_activation_S3_0p6B_Games_1ep.sh
++++ b/final_scripts/rq4_model_size/sft_reasoning_activation_S3_0p6B_Games_1ep.sh
 @@ -0,0 +1,65 @@
 +#!/bin/bash
 +#SBATCH --partition=gpu_h100
@@ -3090,11 +3090,11 @@ index 0000000..3065fc2
 +    --train_new_token_embeddings_only False \
 +    "$@"
 +} 2>&1 | tee "${LOG_FILE}"
-diff --git a/final_scripts/rq3_model_size/sft_reasoning_activation_S3_4B_Games.sh b/final_scripts/rq3_model_size/sft_reasoning_activation_S3_4B_Games.sh
+diff --git a/final_scripts/rq4_model_size/sft_reasoning_activation_S3_4B_Games.sh b/final_scripts/rq4_model_size/sft_reasoning_activation_S3_4B_Games.sh
 new file mode 100644
 index 0000000..7e9344c
 --- /dev/null
-+++ b/final_scripts/rq3_model_size/sft_reasoning_activation_S3_4B_Games.sh
++++ b/final_scripts/rq4_model_size/sft_reasoning_activation_S3_4B_Games.sh
 @@ -0,0 +1,67 @@
 +#!/bin/bash
 +#SBATCH --partition=gpu_h100
@@ -3163,11 +3163,11 @@ index 0000000..7e9344c
 +    --train_new_token_embeddings_only False \
 +    "$@"
 +} 2>&1 | tee "${LOG_FILE}"
-diff --git a/final_scripts/rq3_model_size/sft_reasoning_activation_S3_4B_Games_1ep.sh b/final_scripts/rq3_model_size/sft_reasoning_activation_S3_4B_Games_1ep.sh
+diff --git a/final_scripts/rq4_model_size/sft_reasoning_activation_S3_4B_Games_1ep.sh b/final_scripts/rq4_model_size/sft_reasoning_activation_S3_4B_Games_1ep.sh
 new file mode 100644
 index 0000000..b38d2c1
 --- /dev/null
-+++ b/final_scripts/rq3_model_size/sft_reasoning_activation_S3_4B_Games_1ep.sh
++++ b/final_scripts/rq4_model_size/sft_reasoning_activation_S3_4B_Games_1ep.sh
 @@ -0,0 +1,66 @@
 +#!/bin/bash
 +#SBATCH --partition=gpu_h100

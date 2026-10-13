@@ -2,8 +2,7 @@
 # Think-mode evaluation of the A0–A3 GRPO reward experiments (Games).
 #
 # Runs scripts/common/eval/evaluate.py (run_eval_think) on each merged S3 checkpoint to
-# produce the NDCG@{5,10} / HR@{5,10} ranking metrics the reports flagged as the
-# "next step" (the training logs only had the reward proxy, mean@7).
+# produce NDCG@{5,10} / HR@{5,10} ranking metrics from held-out predictions.
 #
 # This is a SLURM ARRAY job: one array task per checkpoint, each on its own single
 # H100, so all six evals run in parallel. For each S3 (RL) condition the job first
