@@ -16,18 +16,16 @@ checkpoints. Full independent retraining of the 1.7B pipeline is outside this st
 The training jobs target a Slurm cluster with H100 GPUs. Run setup commands from the
 repository root. Submit dependent training stages only after the preceding job finishes.
 
-**1. Restore the baseline submodules.** The two baselines
-(`baselines/repos/SIDReasoner`, `baselines/repos/SASRec`) are git submodules.
-In a Git checkout, initialize them with:
+**1. Download the baseline sources.** Anonymous source snapshots are verified against
+checksums of the reviewed files and installed under `baselines/repos/` (requires
+Python 3 and `curl`):
 
 ```bash
-git submodule update --init --recursive
+python3 scripts/common/download_baselines.py
 ```
 
-A source zip does not include submodule contents or support `git submodule update`.
-An anonymous distribution must include reviewed baseline source snapshots; see
-[submission preparation](SUBMISSION.md). The current submodule URLs
-still identify contributor-controlled repositories.
+The downloader preserves existing baseline directories. The anonymous URLs serve
+source archives, not Git repositories.
 
 **2. Apply the working-tree patch.** Four of the five suites (`reproduction`, `components`,
 `model_size`, `diversity`) run from scripts that live *inside* the SIDReasoner submodule, because
@@ -44,7 +42,7 @@ This is **idempotent** (safe to re-run) and creates, among other things, the per
 scripts under `baselines/repos/SIDReasoner/final_scripts/<rqN_*>/`. The submodule stays pinned to
 its upstream commit (`.gitmodules` sets `ignore = dirty`); run this before sourcing the
 submodule's `snellius_env.sh`. The patch must be re-applied after any fresh
-`git submodule update`.
+baseline download.
 
 **3. Build the environment.** Creates the SIDReasoner `uv` env (Python 3.10) inside the
 submodule and re-applies the patch first:
@@ -65,6 +63,9 @@ the baseline Makefile does not filter by category.
 bash scripts/common/data_prep/download_amazon.sh Video_Games
 bash scripts/common/data_prep/download_amazon.sh Office_Products
 bash scripts/common/data_prep/download_amazon.sh Industrial_and_Scientific
+
+# SASRec uses the same archive; override its unavailable default Drive ID:
+make -C baselines/repos/SASRec data DATA_FILE_ID=1etg1e8oStGOjsg1Vr15vFnjlTMUx4Htz
 
 # Author SFT/RA checkpoints from HuggingFace (heyingzhi/sidreasoner_*):
 bash scripts/common/data_prep/download_checkpoints.sh

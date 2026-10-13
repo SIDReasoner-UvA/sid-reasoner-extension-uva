@@ -46,7 +46,7 @@ cd "${REPO_ROOT}"
 SIDREASONER_DIR="${REPO_ROOT}/baselines/repos/SIDReasoner"
 if [[ ! -f "${SIDREASONER_DIR}/pyproject.toml" ]]; then
     echo "[error] SIDReasoner submodule not found at ${SIDREASONER_DIR}"
-    echo "        Run: git submodule update --init"
+    echo "        Run: python3 scripts/common/download_baselines.py"
     exit 1
 fi
 

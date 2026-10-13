@@ -24,7 +24,7 @@ PATCH_FILE="${REPO_ROOT}/patches/common/sidreasoner-local.patch"
 
 if [[ ! -f "${SUBMODULE_DIR}/pyproject.toml" ]]; then
     echo "[apply-patch] ERROR: submodule not found at ${SUBMODULE_DIR}"
-    echo "              Run: git submodule update --init --recursive"
+    echo "              Run: python3 scripts/common/download_baselines.py"
     exit 1
 fi
 

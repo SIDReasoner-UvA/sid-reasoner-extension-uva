@@ -68,6 +68,8 @@ Use `evaluate_Qwen3_think_S1.sh` for the reported greedy-thinking evaluation.
 
 ## Independent retraining checkpoints
 
+Checkpoint download links will be added once the submission is public.
+
 *SIDReasoner-extensions/1.7B-S1/SFT*
 
 *SIDReasoner-extensions/1.7B-S1/RA*

@@ -33,7 +33,7 @@ echo "[download] Output dir: $OUTDIR"
 # Mirror the make data target from baselines/repos/SIDReasoner/Makefile
 SIDROOT="baselines/repos/SIDReasoner"
 if [[ ! -f "$SIDROOT/Makefile" ]]; then
-    echo "[error] SIDReasoner submodule not initialised. Run: git submodule update --init"
+    echo "[error] SIDReasoner submodule not initialised. Run: python3 scripts/common/download_baselines.py"
     exit 1
 fi
 

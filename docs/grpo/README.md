@@ -83,6 +83,8 @@ Results from the reported step-100 evaluation:
 
 ## Checkpoints
 
+Checkpoint download links will be added once the submission is public.
+
 The six actors are merged step-100 checkpoints:
 
 *grpo-a0-baseline-games*

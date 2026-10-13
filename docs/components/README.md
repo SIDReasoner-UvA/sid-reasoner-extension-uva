@@ -50,6 +50,8 @@ Relative percentage changes are measured against the RA checkpoint.
 
 Checkpoint names for the accompanying artifact package:
 
+Checkpoint download links will be added once the submission is public.
+
 *Video_Games_extra_sft_Qwen3-1.7B*
 
 *Video_Games_extra_ra_Qwen3-1.7B*

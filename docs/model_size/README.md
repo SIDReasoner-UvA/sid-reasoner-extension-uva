@@ -120,6 +120,8 @@ Transformers **4.51.3** matches the patched lockfile and Appendix D.
 
 ## Checkpoints
 
+Checkpoint download links will be added once the submission is public.
+
 *SIDReasoner-extensions/0.6B/SFT*
 
 *SIDReasoner-extensions/0.6B/RA*
