@@ -39,7 +39,7 @@ The launch scripts are part of the **SIDReasoner submodule**, materialised by
 `patches/common/sidreasoner-local.patch` (same pattern as `rq2_components` /
 `rq5_diversity`). After applying the patch they sit under
 `baselines/repos/SIDReasoner/final_scripts/rq1_reproduction/`. Run from the submodule
-root with `$PYTHON_CMD`; source `final_scripts/snellius_env.sh` first.
+root with `$PYTHON_CMD`; source `final_scripts/cluster_env.sh` first.
 
 | Stage | Script (`final_scripts/rq1_reproduction/`) |
 |-------|--------------------------------------------|
@@ -54,7 +54,7 @@ Cold-start RA saves the final epoch with `load_best_model_at_end=False`.
 ```bash
 bash scripts/common/apply_submodule_patch.sh
 cd baselines/repos/SIDReasoner
-source final_scripts/snellius_env.sh
+source final_scripts/cluster_env.sh
 
 sbatch final_scripts/rq1_reproduction/sft_Qwen3_S1_Games.sh                 # SFT  -> HR@10 0.0387
 sbatch final_scripts/rq1_reproduction/sft_reasoning_activation_S1_Games.sh  # RA(5-ep) -> HR@10 0.0602

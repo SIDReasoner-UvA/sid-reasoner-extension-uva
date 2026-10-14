@@ -39,7 +39,7 @@ done
 if [[ -n "${SLURM_SUBMIT_DIR:-}" ]]; then
     REPO_ROOT="${SLURM_SUBMIT_DIR}"
 else
-    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 fi
 cd "${REPO_ROOT}"
 

@@ -57,11 +57,11 @@ CONFIG="${CONFIGS[$IDX]}"
 export UV_PROJECT_ENVIRONMENT="${UV_PROJECT_ENVIRONMENT:-$(pwd)/baselines/repos/SIDReasoner/.venv}"
 
 # Apply local submodule modifications (kept as a patch in this repo). Must run
-# before sourcing snellius_env.sh — the patch edits it.
+# before sourcing cluster_env.sh — the patch edits it.
 bash scripts/common/apply_submodule_patch.sh
 
-# Load Snellius modules and set TORCHRUN_CMD / PYTHON_CMD.
-source baselines/repos/SIDReasoner/scripts/snellius_env.sh
+# Load the cluster modules and set TORCHRUN_CMD / PYTHON_CMD.
+source baselines/repos/SIDReasoner/scripts/cluster_env.sh
 
 # PYTHONPATH must include BOTH:
 #  - the SIDReasoner submodule root, so the `verl` source tree (used by

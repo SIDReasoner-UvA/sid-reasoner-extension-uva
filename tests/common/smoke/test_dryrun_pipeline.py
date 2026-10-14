@@ -126,11 +126,12 @@ def test_s1_output_dir_includes_stage1_sft(config_rel):
 
 
 @pytest.mark.parametrize("config_rel", ALL_CONFIGS)
-def test_summary_written_line_present(config_rel):
+def test_summary_printed_without_write_claim(config_rel):
     out = _run_dry(config_rel)
-    assert "[SUMMARY] Written to" in out, (
+    assert "[SUMMARY]" in out, (
         f"[SUMMARY] line missing from dry-run output for {config_rel}"
     )
+    assert "[SUMMARY] Written to" not in out
 
 
 @pytest.mark.parametrize("config_rel", ALL_CONFIGS)

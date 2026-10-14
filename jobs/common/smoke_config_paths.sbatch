@@ -20,7 +20,7 @@ if [[ -n "${SLURM_SUBMIT_DIR:-}" ]]; then
 fi
 
 export UV_PROJECT_ENVIRONMENT="${UV_PROJECT_ENVIRONMENT:-$(pwd)/baselines/repos/SIDReasoner/.venv}"
-source baselines/repos/SIDReasoner/scripts/snellius_env.sh
+source baselines/repos/SIDReasoner/scripts/cluster_env.sh
 
 echo "[smoke_config_paths] Repo root: $(pwd)"
 echo "[smoke_config_paths] Venv: ${UV_PROJECT_ENVIRONMENT}"

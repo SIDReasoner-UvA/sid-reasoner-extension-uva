@@ -43,8 +43,8 @@ The launch scripts are part of the **SIDReasoner submodule**, materialised by
 `rq5_diversity`). After applying the patch they sit under
 `baselines/repos/SIDReasoner/final_scripts/rq4_model_size/`, and the analysis tooling
 under the submodule's `utils/`. Run everything from the submodule root with
-`$PYTHON_CMD` (the venv) — sourcing `final_scripts/snellius_env.sh` sets it and unsets
-`ROCR_VISIBLE_DEVICES` (mandatory for GRPO to launch on Snellius).
+`$PYTHON_CMD` (the venv) — sourcing `final_scripts/cluster_env.sh` sets it and unsets
+`ROCR_VISIBLE_DEVICES` (mandatory for GRPO to launch on the cluster).
 
 | Stage | Script (`final_scripts/rq4_model_size/`) |
 |-------|------------------------------------------|
@@ -68,7 +68,7 @@ OOMs at `micro_batch_size 16` (by ~4.5 GiB) and is sharded over 4 GPUs.
 ```bash
 bash scripts/common/apply_submodule_patch.sh
 cd baselines/repos/SIDReasoner
-source final_scripts/snellius_env.sh   # sets PYTHON_CMD; unsets ROCR_VISIBLE_DEVICES
+source final_scripts/cluster_env.sh   # sets PYTHON_CMD; unsets ROCR_VISIBLE_DEVICES
 # one-time: uv pip install --python "$UV_PROJECT_ENVIRONMENT/bin/python" matplotlib huggingface_hub
 
 # Run per size; swap 0p6B <-> 4B. Each stage feeds the next.

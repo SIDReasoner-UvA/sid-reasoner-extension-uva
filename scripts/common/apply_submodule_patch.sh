@@ -6,7 +6,7 @@
 # submodule's working tree here.
 #
 # Idempotent: safe to run repeatedly. Must run before sourcing the submodule's
-# scripts/snellius_env.sh (the patch modifies that file).
+# scripts/cluster_env.sh (the patch modifies that file).
 #
 # Usage (from anywhere):
 #   bash scripts/common/apply_submodule_patch.sh
@@ -32,6 +32,8 @@ if [[ ! -f "${PATCH_FILE}" ]]; then
     echo "[apply-patch] ERROR: patch file not found at ${PATCH_FILE}"
     exit 1
 fi
+
+python3 "${REPO_ROOT}/scripts/common/normalize_baseline_env.py" "${SUBMODULE_DIR}"
 
 if git -C "${SUBMODULE_DIR}" apply --reverse --check "${PATCH_FILE}" 2>/dev/null; then
     echo "[apply-patch] Patch already applied — nothing to do."

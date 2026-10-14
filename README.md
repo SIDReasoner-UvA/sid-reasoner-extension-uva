@@ -26,6 +26,8 @@ python3 scripts/common/download_baselines.py
 
 The downloader preserves existing baseline directories. The anonymous URLs serve
 source archives, not Git repositories.
+After checksum verification, cluster environment scripts are renamed to `cluster_env.sh`
+and their references are updated. Patch setup also normalizes existing downloads.
 
 **2. Apply the working-tree patch.** Four of the five suites (`reproduction`, `components`,
 `model_size`, `diversity`) run from scripts that live *inside* the SIDReasoner submodule, because
@@ -41,7 +43,7 @@ bash scripts/common/apply_submodule_patch.sh
 This is **idempotent** (safe to re-run) and creates, among other things, the per-suite launch
 scripts under `baselines/repos/SIDReasoner/final_scripts/<rqN_*>/`. The submodule stays pinned to
 its upstream commit (`.gitmodules` sets `ignore = dirty`); run this before sourcing the
-submodule's `snellius_env.sh`. The patch must be re-applied after any fresh
+submodule's `cluster_env.sh`. The patch must be re-applied after any fresh
 baseline download.
 
 **3. Build the environment.** Creates the SIDReasoner `uv` env (Python 3.10) inside the

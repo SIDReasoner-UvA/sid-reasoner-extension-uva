@@ -76,7 +76,7 @@ def main() -> None:
     with config_path.open() as f:
         config = yaml.safe_load(f)
 
-    checkpoint = args.checkpoint or infer_checkpoint(config)
+    checkpoint = args.checkpoint.resolve() if args.checkpoint is not None else infer_checkpoint(config)
     output_root = Path(config["paths"]["output_root"]).resolve()
     result_json = output_root / "eval_predictions.json"
 
@@ -85,7 +85,8 @@ def main() -> None:
     print(f"[evaluate] Result JSON: {result_json}")
     print(f"[evaluate] Think mode:  {uses_thinking(config)}")
 
-    output_root.mkdir(parents=True, exist_ok=True)
+    if not args.dry_run:
+        output_root.mkdir(parents=True, exist_ok=True)
 
     adapter = SIDReasonerAdapter(config=config, repo_root=args.repo_root, dry_run=args.dry_run)
 

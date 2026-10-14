@@ -37,11 +37,11 @@ fi
 export UV_PROJECT_ENVIRONMENT="${UV_PROJECT_ENVIRONMENT:-$(pwd)/baselines/repos/SIDReasoner/.venv}"
 
 # Apply our local submodule modifications (kept as a patch in this repo, not
-# committed upstream). Must run before sourcing snellius_env.sh — the patch edits it.
+# committed upstream). Must run before sourcing cluster_env.sh — the patch edits it.
 bash scripts/common/apply_submodule_patch.sh
 
-# Load Snellius modules and set TORCHRUN_CMD / PYTHON_CMD
-source baselines/repos/SIDReasoner/scripts/snellius_env.sh
+# Load the cluster modules and set TORCHRUN_CMD / PYTHON_CMD
+source baselines/repos/SIDReasoner/scripts/cluster_env.sh
 
 echo "[submit_pipeline] Config: ${CONFIG}"
 echo "[submit_pipeline] Job ID: ${SLURM_JOB_ID:-local}"

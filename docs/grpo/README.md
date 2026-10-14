@@ -125,12 +125,12 @@ python scripts/common/train/train_pipeline.py \
     --dry-run
 ```
 
-**Run a single variant (Snellius cluster):**
+**Run a single variant (Slurm cluster):**
 ```bash
 sbatch --export=ALL,CONFIG=configs/grpo/a1_no_format/games.yaml jobs/grpo/reward_sweep.job
 ```
 
-**Run the six paper variants sequentially (Snellius cluster):**
+**Run the six paper variants sequentially (Slurm cluster):**
 ```bash
 sbatch jobs/grpo/reward_sweep.job
 ```

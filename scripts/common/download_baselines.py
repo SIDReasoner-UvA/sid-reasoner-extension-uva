@@ -8,6 +8,8 @@ import tempfile
 import subprocess
 import zipfile
 
+from normalize_baseline_env import normalize
+
 BASELINES = {
     "SIDReasoner": ("SIDReasoner-05B4", "98710dbbd8362cc828b6ab69d9925132264e283c28fabb457921a23fb0d9ee5b"),
     "SASRec": ("SASRec-1CE8", "580cf4bec269f2b27622071d9104fb86ae6a0be9ad908e3ab3baad5e21836f05"),
@@ -47,6 +49,8 @@ def restore(root):
                                   + hashlib.sha256(path.read_bytes()).digest())
             if digest.hexdigest() != expected:
                 raise ValueError(f"{name}: snapshot differs from the reviewed source; download not installed")
+            if name == "SIDReasoner":
+                normalize(staging)
             merge_script = staging / 'scripts' / 'merge_fsdp_ckpt_ALL.sh'
             if merge_script.exists():
                 merge_script.chmod(0o755)

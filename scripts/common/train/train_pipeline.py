@@ -6,7 +6,7 @@ Usage:
     python scripts/common/train/train_pipeline.py --config ... --dry-run   # print commands only
 
 Must be run from the repo root so relative paths in the YAML resolve correctly.
-The sbatch job sources snellius_env.sh before calling this script, which sets
+The sbatch job sources cluster_env.sh before calling this script, which sets
 TORCHRUN_CMD and PYTHON_CMD in the environment.
 """
 

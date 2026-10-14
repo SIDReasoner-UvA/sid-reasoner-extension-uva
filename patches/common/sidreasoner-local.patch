@@ -624,7 +624,7 @@ index 0000000..96934f2
 +
 +See the main repository README for setup and artifact-layout requirements. These launchers require data and checkpoints in the submodule layout.
 +
-+Shared cluster environment settings are kept in `snellius_env.sh` because the job scripts source it directly. Utility Python files used by these scripts are in the top-level `utils/` folder.
++Shared cluster environment settings are kept in `cluster_env.sh` because the job scripts source it directly. Utility Python files used by these scripts are in the top-level `utils/` folder.
 +
 +The original repository scripts remain in `scripts/`; this folder is the minimal handoff bundle for the paper-specific experiments.
 diff --git a/final_scripts/rq1_reproduction/evaluate_Qwen3_think_S1.sh b/final_scripts/rq1_reproduction/evaluate_Qwen3_think_S1.sh
@@ -642,7 +642,7 @@ index 0000000..df9c744
 +#SBATCH --time=08:00:00
 +#SBATCH --output=slurm_output/%x-%j.out
 +
-+# S1 thinking-mode evaluation. Baked-in S1 checkpoints (Snellius does not
++# S1 thinking-mode evaluation. Baked-in S1 checkpoints (the cluster does not
 +# propagate submit-time env vars). Evaluates BOTH:
 +#   - Phase B (reasoning activation) ckpt  -> "S1 before RL" numbers
 +#   - merged Phase C (GRPO) actor          -> "S1 - After RL" numbers
@@ -656,7 +656,7 @@ index 0000000..df9c744
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +
 +CATEGORY="${CATEGORY:-Video_Games}"
 +TEST_FILE="${TEST_FILE:-./data/Amazon/test/Video_Games_5_2016-10-2018-11.csv}"
@@ -806,7 +806,7 @@ index 0000000..afc5b57
 +# a SINGLE *sampled* reasoning (temperature > 0), then the same constrained-beam
 +# SID generation. Evaluates the Phase B (reasoning-activation) checkpoint.
 +#
-+# Temperature is a POSITIONAL arg (env vars don't propagate on Snellius):
++# Temperature is a POSITIONAL arg (env vars don't propagate on the cluster):
 +#   sbatch scripts/evaluate_Qwen3_think_S1_bestof1.sh 1.0
 +#   sbatch scripts/evaluate_Qwen3_think_S1_bestof1.sh 0.6
 +# Sweep to match the paper's S1 before-RL R@10 = 0.0388.
@@ -820,9 +820,9 @@ index 0000000..afc5b57
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +
-+# Positional args (env vars don't propagate on Snellius):
++# Positional args (env vars don't propagate on the cluster):
 +#   $1 = reasoning sampling temperature (>0). default 1.0
 +#   $2 = checkpoint to evaluate. default = Phase B (S1 before-RL).
 +#        For "after RL", pass the merged GRPO actor, e.g.:
@@ -957,7 +957,7 @@ index 0000000..8121979
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +
 +CATEGORY="${CATEGORY:-Video_Games}"
 +BASE_MODEL="${BASE_MODEL:-Qwen/Qwen3-1.7B}"
@@ -1030,7 +1030,7 @@ index 0000000..28e2761
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +
 +CATEGORY="${CATEGORY:-Video_Games}"
 +TRAIN_FILE="${TRAIN_FILE:-./data/Amazon/train/Video_Games_5_2016-10-2018-11.csv}"
@@ -1192,7 +1192,7 @@ index 0000000..e4a7cce
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +if [[ -x "${PWD}/.venv/bin/python" ]]; then
 +    PYTHON_CMD="${PWD}/.venv/bin/python"
 +    export PYTHON_CMD
@@ -1442,7 +1442,7 @@ index 0000000..96f6d6a
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +if [[ -x "${PWD}/.venv/bin/python" ]]; then
 +    PYTHON_CMD="${PWD}/.venv/bin/python"
 +    export PYTHON_CMD
@@ -1611,7 +1611,7 @@ index 0000000..8196425
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +if [[ -x "${PWD}/.venv/bin/python" ]]; then
 +    PYTHON_CMD="${PWD}/.venv/bin/python"
 +    export PYTHON_CMD
@@ -1891,7 +1891,7 @@ index 0000000..12013aa
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +if [[ -x "${PWD}/.venv/bin/python" ]]; then
 +    PYTHON_CMD="${PWD}/.venv/bin/python"
 +    export PYTHON_CMD
@@ -2051,7 +2051,7 @@ index 0000000..ca82b51
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +
 +DATASETS="${DATASETS:-Video_Games Office_Products}"
 +CONTINUATIONS="${CONTINUATIONS:-extra_sft extra_ra}"
@@ -2197,7 +2197,7 @@ index 0000000..e144a01
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +
 +n_gpus_per_node="${N_GPUS_PER_NODE:-4}"
 +nnodes="${NNODES:-1}"
@@ -2282,7 +2282,7 @@ index 0000000..47841e9
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +
 +n_gpus_per_node="${N_GPUS_PER_NODE:-4}"
 +nnodes="${NNODES:-1}"
@@ -2349,7 +2349,7 @@ index 0000000..68818b4
 +#SBATCH --time=08:00:00
 +#SBATCH --output=slurm_output/%x-%j.out
 +
-+# S3 thinking-mode evaluation. Baked-in S3 checkpoints (Snellius does not
++# S3 thinking-mode evaluation. Baked-in S3 checkpoints (the cluster does not
 +# propagate submit-time env vars). Evaluates BOTH:
 +#   - Phase B (reasoning activation) ckpt  -> "S3 before RL" numbers
 +#   - merged Phase C (GRPO) actor          -> "S3 - After RL" numbers
@@ -2363,7 +2363,7 @@ index 0000000..68818b4
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +
 +CATEGORY="${CATEGORY:-Video_Games}"
 +TEST_FILE="${TEST_FILE:-./data/Amazon/test/Video_Games_5_2016-10-2018-11.csv}"
@@ -2524,7 +2524,7 @@ index 0000000..7920f7f
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +
 +CATEGORY="${CATEGORY:-Video_Games}"
 +TEST_FILE="${TEST_FILE:-./data/Amazon/test/Video_Games_5_2016-10-2018-11.csv}"
@@ -2674,7 +2674,7 @@ index 0000000..3f120c3
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +
 +CATEGORY="${CATEGORY:-Video_Games}"
 +TEST_FILE="${TEST_FILE:-./data/Amazon/test/Video_Games_5_2016-10-2018-11.csv}"
@@ -2831,7 +2831,7 @@ index 0000000..6ee3a69
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +
 +CATEGORY="${CATEGORY:-Video_Games}"
 +BASE_MODEL="${BASE_MODEL:-Qwen/Qwen3-0.6B}"
@@ -2907,7 +2907,7 @@ index 0000000..a269777
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +
 +CATEGORY="${CATEGORY:-Video_Games}"
 +BASE_MODEL="${BASE_MODEL:-Qwen/Qwen3-4B}"
@@ -2979,7 +2979,7 @@ index 0000000..63129dc
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +
 +CATEGORY="${CATEGORY:-Video_Games}"
 +TRAIN_FILE="${TRAIN_FILE:-./data/Amazon/train/Video_Games_5_2016-10-2018-11.csv}"
@@ -3050,7 +3050,7 @@ index 0000000..3065fc2
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +
 +CATEGORY="${CATEGORY:-Video_Games}"
 +TRAIN_FILE="${TRAIN_FILE:-./data/Amazon/train/Video_Games_5_2016-10-2018-11.csv}"
@@ -3123,7 +3123,7 @@ index 0000000..7e9344c
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +
 +CATEGORY="${CATEGORY:-Video_Games}"
 +TRAIN_FILE="${TRAIN_FILE:-./data/Amazon/train/Video_Games_5_2016-10-2018-11.csv}"
@@ -3195,7 +3195,7 @@ index 0000000..b38d2c1
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +
 +CATEGORY="${CATEGORY:-Video_Games}"
 +TRAIN_FILE="${TRAIN_FILE:-./data/Amazon/train/Video_Games_5_2016-10-2018-11.csv}"
@@ -3331,7 +3331,7 @@ index 0000000..38d2ba4
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +
 +export HF_HUB_ENABLE_HF_TRANSFER="${HF_HUB_ENABLE_HF_TRANSFER:-1}"
 +
@@ -3381,7 +3381,7 @@ index 0000000..9ca7569
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./final_scripts/snellius_env.sh
++source ./final_scripts/cluster_env.sh
 +if [[ -x "${PWD}/.venv/bin/python" ]]; then
 +    PYTHON_CMD="${PWD}/.venv/bin/python"
 +    export PYTHON_CMD
@@ -3640,15 +3640,15 @@ index 0000000..f978669
 +${PYTHON_CMD} ./utils/make_rq5_diversity_tables.py \
 +    --result-root "${RESULT_ROOT}" \
 +    --output-dir "${OUTPUT_DIR}"
-diff --git a/final_scripts/snellius_env.sh b/final_scripts/snellius_env.sh
+diff --git a/final_scripts/cluster_env.sh b/final_scripts/cluster_env.sh
 new file mode 100644
 index 0000000..79fefb6
 --- /dev/null
-+++ b/final_scripts/snellius_env.sh
++++ b/final_scripts/cluster_env.sh
 @@ -0,0 +1,48 @@
 +#!/bin/bash
 +
-+# Shared runtime setup for SIDReasoner jobs on Snellius.
++# Shared runtime setup for SIDReasoner jobs on the cluster.
 +# Source this file from training/evaluation scripts after `set -euo pipefail`.
 +
 +if [[ -n "${SLURM_JOB_ID:-}" ]] && command -v module >/dev/null 2>&1; then
@@ -3677,7 +3677,7 @@ index 0000000..79fefb6
 +export NCCL_IB_DISABLE="${NCCL_IB_DISABLE:-1}"
 +export NCCL_NET_GDR_LEVEL="${NCCL_NET_GDR_LEVEL:-0}"
 +
-+# Snellius sets ROCR_VISIBLE_DEVICES even on NVIDIA nodes; verl refuses to start
++# the cluster sets ROCR_VISIBLE_DEVICES even on NVIDIA nodes; verl refuses to start
 +# when both ROCR and CUDA/HIP visible-device vars are set. Mandatory for GRPO.
 +unset ROCR_VISIBLE_DEVICES || true
 +
@@ -3756,7 +3756,7 @@ index 0000000..ae3043f
 +fi
 +cd "$SCRIPT_DIR"
 +
-+source ./scripts/snellius_env.sh
++source ./scripts/cluster_env.sh
 +
 +ROOTS=("$@")
 +if [[ ${#ROOTS[@]} -eq 0 ]]; then
@@ -3883,7 +3883,7 @@ index ad017b4..b5c613d 100755
 +++ b/scripts/merge_fsdp_ckpt_ALL.sh
 @@ -24,6 +24,11 @@ cd "$SCRIPT_DIR"
  
- source ./scripts/snellius_env.sh
+ source ./scripts/cluster_env.sh
  
 +# verl is a local package in the repo root. merge_fsdp_checkpoint.py runs as a file
 +# (not `python -m ...`), so sys.path[0] is scripts/ and `import verl` fails unless the
@@ -3893,10 +3893,10 @@ index ad017b4..b5c613d 100755
  CKPT_ROOT="${CKPT_ROOT:-./checkpoints/RecRL_Reasoning/Office_Products_stage3_rl_Qwen3-1.7B}"
  EVAL_INTERVAL="${EVAL_INTERVAL:-100}"
  
-diff --git a/scripts/snellius_env.sh b/scripts/snellius_env.sh
+diff --git a/scripts/cluster_env.sh b/scripts/cluster_env.sh
 index 1fbe5e7..e4a2783 100644
---- a/scripts/snellius_env.sh
-+++ b/scripts/snellius_env.sh
+--- a/scripts/cluster_env.sh
++++ b/scripts/cluster_env.sh
 @@ -27,9 +27,9 @@ export NCCL_P2P_DISABLE="${NCCL_P2P_DISABLE:-1}"
  export NCCL_IB_DISABLE="${NCCL_IB_DISABLE:-1}"
  export NCCL_NET_GDR_LEVEL="${NCCL_NET_GDR_LEVEL:-0}"

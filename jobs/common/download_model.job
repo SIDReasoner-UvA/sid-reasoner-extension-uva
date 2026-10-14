@@ -1,6 +1,6 @@
 #!/bin/bash
 # Pre-download Qwen/Qwen3-1.7B to the local HF cache before training jobs run.
-# Compute nodes on Snellius may not have outbound internet; run this from a
+# Compute nodes on the cluster may not have outbound internet; run this from a
 # login/transfer node or a partition with internet access (e.g. rome).
 #
 # Submit from the repo root:
@@ -25,9 +25,9 @@ fi
 
 MODEL="${MODEL:-Qwen/Qwen3-1.7B}"
 
-# snellius_env.sh sets HF_HOME / HF_HUB_CACHE; uv/torchrun detection is a side-effect we ignore here
+# cluster_env.sh sets HF_HOME / HF_HUB_CACHE; uv/torchrun detection is a side-effect we ignore here
 export PATH="${HOME}/.local/bin:${PATH}"
-source baselines/repos/SIDReasoner/scripts/snellius_env.sh
+source baselines/repos/SIDReasoner/scripts/cluster_env.sh
 
 echo "[download_model] Model:  ${MODEL}"
 echo "[download_model] Cache:  ${HF_HUB_CACHE}"

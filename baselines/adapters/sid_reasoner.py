@@ -6,7 +6,7 @@ training stage and evaluation script. All subprocess calls run with
 cwd=repo_root so relative imports inside SIDReasoner resolve correctly.
 
 Environment variables TORCHRUN_CMD and PYTHON_CMD are set by
-baselines/repos/SIDReasoner/scripts/snellius_env.sh, which the sbatch job
+baselines/repos/SIDReasoner/scripts/cluster_env.sh, which the sbatch job
 sources before invoking this module. Defaults fall back to plain torchrun/python.
 """
 
@@ -310,6 +310,9 @@ class SIDReasonerAdapter:
             "stage_durations_s": self._timings,
             "dry_run": self.dry_run,
         }
+        if self.dry_run:
+            print(f"[SUMMARY] {json.dumps(summary, indent=2)}")
+            return
         out = self.output_root / "pipeline_summary.json"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(summary, indent=2))
